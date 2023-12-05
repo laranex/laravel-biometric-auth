@@ -34,11 +34,9 @@ trait HasBiometrics
      */
     public function getBiometric(string $biometricId): Model
     {
-        $biometric = $this->biometrics()->where('id', $biometricId)->first();
+        $biometric = $this->getActiveBiometric($biometricId);
 
-        throw_if(!$biometric,  new BiometricNotFoundException());
-
-        if (! $biometric->challenge) {
+        if (!$biometric->challenge) {
             $biometric->update(['challenge' => bin2hex(random_bytes(32))]);
         }
 
@@ -46,23 +44,40 @@ trait HasBiometrics
     }
 
     /**
-     * @throws BiometricNotFoundException
-     * @throws BiometricChallengeNotFoundException
      * @throws Throwable
      */
     public function verifyBiometric(string $biometricId, string $signature): bool
     {
-        $biometric = $this->biometrics()->where('id', $biometricId)->first();
+        $biometric = $this->getActiveBiometric($biometricId);
 
-        throw_if(!$biometric,  new BiometricNotFoundException());
-
-        throw_if(!$biometric->challenge,  new BiometricChallengeNotFoundException());
+        throw_if(!$biometric->challenge, new BiometricChallengeNotFoundException());
 
         return openssl_verify($biometric->challenge, base64_decode($signature), $biometric->public_key, config('biometric-auth.signature_algorithm'));
+    }
+
+    /**
+     * @throws Throwable
+     */
+    public function revokeBiometric(string $biometricId): bool
+    {
+        $biometric = $this->getActiveBiometric($biometricId);
+
+        return $biometric->update(["revoked" => true]);
     }
 
     public function biometrics(): HasMany
     {
         return $this->hasMany(Biometric::class, 'authenticable_id');
+    }
+
+    /**
+     * @throws Throwable
+     */
+    private function getActiveBiometric(string $biometricId): Model {
+        $biometric = $this->biometrics()->where(['id' => $biometricId, 'revoked' => false])->first();
+
+        throw_if(!$biometric, new BiometricNotFoundException());
+
+        return $biometric;
     }
 }
