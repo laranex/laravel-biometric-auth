@@ -40,14 +40,28 @@ This is the contents of the published config file:
 
 ```php
 return [
+    'table' => env('BIOMETRIC_AUTH_TABLE', 'biometrics'),
+
+    'signature_algorithm' => env('BIOMETRIC_AUTH_ALGORITHM', OPENSSL_ALGO_SHA256),
 ];
 ```
 
 ## Usage
 
 ```php
-$laravelBiometricAuth = new Laranex\LaravelBiometricAuth();
-echo $laravelBiometricAuth->echoPhrase('Hello, Laranex!');
+// Use Laranex\LaravelBiometricAuth\Traits\HasBiometricAuth in your Authenticable Model such as User, Admin
+class User extends Authenticatable {
+    use Laranex\LaravelBiometricAuth\Traits\HasBiometricAuth;
+}
+
+// Register a new biometric
+$user->createBiometric("Public Key in PEM format");
+
+// Create a challenge for biometric authentication
+$user->getBiometric("UUID of a biometric");
+
+// Verify the signature
+$user->verifyBiometric("UUID of a biometric", "Signature");
 ```
 
 ## Testing
