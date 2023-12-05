@@ -62,6 +62,9 @@ $user->getBiometric("UUID of a biometric");
 
 // Verify the signature
 $user->verifyBiometric("UUID of a biometric", "Signature");
+
+// Revoke a biometric
+$user->revokeBiometric("UUID of a biometric");
 ```
 
 ## Testing
