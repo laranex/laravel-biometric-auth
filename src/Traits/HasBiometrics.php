@@ -36,7 +36,9 @@ trait HasBiometrics
     {
         $biometric = $this->getActiveBiometric($biometricId);
 
-        if (!$biometric->challenge) $biometric->update(['challenge' => bin2hex(random_bytes(32))]);
+        if (! $biometric->challenge) {
+            $biometric->update(['challenge' => bin2hex(random_bytes(32))]);
+        }
 
         return $biometric;
     }
@@ -48,7 +50,7 @@ trait HasBiometrics
     {
         $biometric = $this->getActiveBiometric($biometricId);
 
-        throw_if(!$biometric->challenge, new BiometricChallengeNotFoundException());
+        throw_if(! $biometric->challenge, new BiometricChallengeNotFoundException());
 
         return openssl_verify($biometric->challenge, base64_decode($signature), $biometric->public_key, config('biometric-auth.signature_algorithm'));
     }
@@ -60,7 +62,7 @@ trait HasBiometrics
     {
         $biometric = $this->getActiveBiometric($biometricId);
 
-        return $biometric->update(["revoked" => true]);
+        return $biometric->update(['revoked' => true]);
     }
 
     public function biometrics(): HasMany
@@ -71,10 +73,11 @@ trait HasBiometrics
     /**
      * @throws Throwable
      */
-    private function getActiveBiometric(string $biometricId): Model {
+    private function getActiveBiometric(string $biometricId): Model
+    {
         $biometric = $this->biometrics()->where(['id' => $biometricId, 'revoked' => false])->first();
 
-        throw_if(!$biometric, new BiometricNotFoundException());
+        throw_if(! $biometric, new BiometricNotFoundException());
 
         return $biometric;
     }
