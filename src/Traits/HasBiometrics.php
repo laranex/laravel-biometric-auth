@@ -36,9 +36,7 @@ trait HasBiometrics
     {
         $biometric = $this->getActiveBiometric($biometricId);
 
-        if (!$biometric->challenge) {
-            $biometric->update(['challenge' => bin2hex(random_bytes(32))]);
-        }
+        if (!$biometric->challenge) $biometric->update(['challenge' => bin2hex(random_bytes(32))]);
 
         return $biometric;
     }
