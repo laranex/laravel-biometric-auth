@@ -16,22 +16,24 @@ trait HasBiometrics
         return Biometric::create([
             'authenticable_id' => $this->id,
             'authenticable_type' => get_class($this),
-            'public_key' => $publicKey
+            'public_key' => $publicKey,
         ]);
     }
-
 
     /**
      * @throws Exception
      */
-
     public function getBiometric(string $biometricId): Model
     {
-        $biometric = $this->biometrics()->where("id", $biometricId)->first();
+        $biometric = $this->biometrics()->where('id', $biometricId)->first();
 
-        if (!$biometric) throw new BiometricNotFoundException();
+        if (! $biometric) {
+            throw new BiometricNotFoundException();
+        }
 
-        if (!$biometric->challenge) $biometric->update(["challenge" => bin2hex(random_bytes(32))]);
+        if (! $biometric->challenge) {
+            $biometric->update(['challenge' => bin2hex(random_bytes(32))]);
+        }
 
         return $biometric;
     }
@@ -42,11 +44,15 @@ trait HasBiometrics
      */
     public function verifyBiometric(string $biometricId, string $signature): bool
     {
-        $biometric = $this->biometrics()->where("id", $biometricId)->first();
+        $biometric = $this->biometrics()->where('id', $biometricId)->first();
 
-        if (!$biometric) throw new BiometricNotFoundException();
+        if (! $biometric) {
+            throw new BiometricNotFoundException();
+        }
 
-        if (!$biometric->challenge) throw new BiometricChallengeNotFoundException();
+        if (! $biometric->challenge) {
+            throw new BiometricChallengeNotFoundException();
+        }
 
         return openssl_verify($biometric->challenge, base64_decode($signature), $biometric->public_key, config('biometric-auth.signature_algorithm'));
     }

@@ -9,9 +9,11 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 class Biometric extends Model
 {
     use HasUuids;
+
     protected $primaryKey = 'id';
 
     protected $fillable = ['id', 'authenticable_id', 'authenticable_type', 'public_key', 'challenge', 'revoked'];
+
     public function getTable()
     {
         return config('biometric-auth.table', parent::getTable());
