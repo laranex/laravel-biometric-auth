@@ -36,7 +36,7 @@ trait HasBiometrics
     {
         $biometric = $this->biometrics()->where('id', $biometricId)->first();
 
-        throw_if(!$biometric,  new BiometricNotFoundException());
+        throw_if(! $biometric, new BiometricNotFoundException());
 
         if (! $biometric->challenge) {
             $biometric->update(['challenge' => bin2hex(random_bytes(32))]);
@@ -54,9 +54,9 @@ trait HasBiometrics
     {
         $biometric = $this->biometrics()->where('id', $biometricId)->first();
 
-        throw_if(!$biometric,  new BiometricNotFoundException());
+        throw_if(! $biometric, new BiometricNotFoundException());
 
-        throw_if(!$biometric->challenge,  new BiometricChallengeNotFoundException());
+        throw_if(! $biometric->challenge, new BiometricChallengeNotFoundException());
 
         return openssl_verify($biometric->challenge, base64_decode($signature), $biometric->public_key, config('biometric-auth.signature_algorithm'));
     }
