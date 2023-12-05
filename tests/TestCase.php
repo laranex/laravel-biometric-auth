@@ -3,8 +3,8 @@
 namespace Laranex\LaravelBiometricAuth\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Orchestra\Testbench\TestCase as Orchestra;
 use Laranex\LaravelBiometricAuth\LaravelBiometricAuthServiceProvider;
+use Orchestra\Testbench\TestCase as Orchestra;
 
 class TestCase extends Orchestra
 {
