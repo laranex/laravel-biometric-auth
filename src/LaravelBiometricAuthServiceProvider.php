@@ -4,7 +4,6 @@ namespace Laranex\LaravelBiometricAuth;
 
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Laranex\LaravelBiometricAuth\Commands\LaravelBiometricAuthCommand;
 
 class LaravelBiometricAuthServiceProvider extends PackageServiceProvider
 {

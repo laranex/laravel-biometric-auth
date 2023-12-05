@@ -24,23 +24,23 @@ trait HasBiometrics
         return Biometric::create([
             'authenticable_id' => $this->id,
             'authenticable_type' => get_class($this),
-            'public_key' => $publicKey
+            'public_key' => $publicKey,
         ]);
     }
-
 
     /**
      * @throws Exception
      * @throws Throwable
      */
-
     public function getBiometric(string $biometricId): Model
     {
-        $biometric = $this->biometrics()->where("id", $biometricId)->first();
+        $biometric = $this->biometrics()->where('id', $biometricId)->first();
 
         throw_if(!$biometric,  new BiometricNotFoundException());
 
-        if (!$biometric->challenge) $biometric->update(["challenge" => bin2hex(random_bytes(32))]);
+        if (! $biometric->challenge) {
+            $biometric->update(['challenge' => bin2hex(random_bytes(32))]);
+        }
 
         return $biometric;
     }
@@ -52,7 +52,7 @@ trait HasBiometrics
      */
     public function verifyBiometric(string $biometricId, string $signature): bool
     {
-        $biometric = $this->biometrics()->where("id", $biometricId)->first();
+        $biometric = $this->biometrics()->where('id', $biometricId)->first();
 
         throw_if(!$biometric,  new BiometricNotFoundException());
 
