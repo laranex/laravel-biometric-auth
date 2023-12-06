@@ -58,10 +58,10 @@ class User extends Authenticatable {
 $user->createBiometric("Public Key in PEM format");
 
 // Create a challenge for biometric authentication
-$user->getBiometric("UUID of a biometric");
+Laranex\LaravelBiometricAuth\Facades\LaravelBiometricAuth::getBiometric("UUID of a biometric");
 
 // Verify the signature
-$user->verifyBiometric("UUID of a biometric", "Signature");
+Laranex\LaravelBiometricAuth\Facades\LaravelBiometricAuth::verifyBiometric("UUID of a biometric", "Signature");
 
 // Revoke a biometric
 $user->revokeBiometric("UUID of a biometric");

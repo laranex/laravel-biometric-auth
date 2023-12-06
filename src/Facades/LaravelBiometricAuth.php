@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Facade;
  */
 class LaravelBiometricAuth extends Facade
 {
-    protected static function getFacadeAccessor()
+    protected static function getFacadeAccessor(): string
     {
         return \Laranex\LaravelBiometricAuth\LaravelBiometricAuth::class;
     }
