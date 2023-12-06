@@ -3,7 +3,6 @@
 namespace Laranex\LaravelBiometricAuth;
 
 use Exception;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laranex\LaravelBiometricAuth\Exceptions\BiometricChallengeNotFoundException;
 use Laranex\LaravelBiometricAuth\Exceptions\BiometricNotFoundException;
 use Laranex\LaravelBiometricAuth\Models\Biometric;
@@ -19,7 +18,7 @@ class LaravelBiometricAuth
     {
         $biometric = $this->getActiveBiometric($biometricId);
 
-        if (!$biometric->challenge) {
+        if (! $biometric->challenge) {
             $biometric->update(['challenge' => bin2hex(random_bytes(32))]);
         }
 
@@ -33,11 +32,10 @@ class LaravelBiometricAuth
     {
         $biometric = $this->getActiveBiometric($biometricId);
 
-        throw_if(!$biometric->challenge, new BiometricChallengeNotFoundException());
+        throw_if(! $biometric->challenge, new BiometricChallengeNotFoundException());
 
         return openssl_verify($biometric->challenge, base64_decode($signature), $biometric->public_key, config('biometric-auth.signature_algorithm'));
     }
-
 
     /**
      * @throws Throwable
@@ -46,7 +44,7 @@ class LaravelBiometricAuth
     {
         $biometric = Biometric::where(['id' => $biometricId, 'revoked' => false])->first();
 
-        throw_if(!$biometric, new BiometricNotFoundException());
+        throw_if(! $biometric, new BiometricNotFoundException());
 
         return $biometric;
     }
