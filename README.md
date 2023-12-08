@@ -49,7 +49,7 @@ return [
 ## Usage
 
 ```php
-// Use Laranex\LaravelBiometricAuth\Traits\HasBiometricAuth in your Authenticable Model such as User, Admin
+// Use Laranex\LaravelBiometricAuth\Traits\HasBiometris in your Authenticable Model such as User, Admin
 class User extends Authenticatable {
     use Laranex\LaravelBiometricAuth\Traits\HasBiometricAuth;
 }
