@@ -13,9 +13,6 @@ trait HasBiometrics
      */
     public function createBiometric(string $publicKey): Biometric
     {
-        $pemPattern = '/^-----BEGIN [A-Z ]+-----\n([A-Za-z0-9+\/=\n]+)\n-----END [A-Z ]+-----$/m';
-        throw_if(preg_match($pemPattern, $publicKey) !== 1, new InvalidPEMFormatPublicKeyException());
-
         return Biometric::create([
             'authenticable_id' => $this->id,
             'authenticable_type' => get_class($this),
