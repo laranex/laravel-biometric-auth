@@ -34,6 +34,7 @@ class LaravelBiometricAuth
 
         throw_if(! $biometric->challenge, new BiometricChallengeNotFoundException());
 
+        // RSA signature verification
         return openssl_verify($biometric->challenge, base64_decode($signature), "-----BEGIN RSA PUBLIC KEY-----\n".$biometric->public_key."\n-----END RSA PUBLIC KEY-----", config('biometric-auth.signature_algorithm'));
     }
 
