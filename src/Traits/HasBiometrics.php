@@ -2,7 +2,6 @@
 
 namespace Laranex\LaravelBiometricAuth\Traits;
 
-use Laranex\LaravelBiometricAuth\Exceptions\InvalidPEMFormatPublicKeyException;
 use Laranex\LaravelBiometricAuth\Models\Biometric;
 use Throwable;
 
