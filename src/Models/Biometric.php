@@ -14,6 +14,8 @@ class Biometric extends Model
 
     protected $fillable = ['id', 'authenticable_id', 'authenticable_type', 'public_key', 'challenge', 'revoked'];
 
+    protected $hidden = ['public_key'];
+
     public function getTable()
     {
         return config('biometric-auth.table', parent::getTable());
