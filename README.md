@@ -5,7 +5,9 @@
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/laranex/laravel-biometric-auth/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/laranex/laravel-biometric-auth/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/laranex/laravel-biometric-auth.svg?style=flat-square)](https://packagist.org/packages/laranex/laravel-biometric-auth)
 
-This is where your description should go. Limit it to a paragraph or two. Consider adding a small example.
+
+
+### openssl 3.0^ is required to work with keys from iOS
 
 
 ## Installation
@@ -63,11 +65,6 @@ Laranex\LaravelBiometricAuth\Facades\LaravelBiometricAuth::verifyBiometric("UUID
 $user->revokeBiometric("UUID of a biometric");
 ```
 
-## Testing
-
-```bash
-composer test
-```
 
 ## Changelog
 
