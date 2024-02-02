@@ -2,22 +2,47 @@
 
 namespace Laranex\LaravelBiometricAuth;
 
-use Spatie\LaravelPackageTools\Package;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Illuminate\Support\ServiceProvider;
 
-class LaravelBiometricAuthServiceProvider extends PackageServiceProvider
+class LaravelBiometricAuthServiceProvider extends ServiceProvider
 {
-    public function configurePackage(Package $package): void
+    /**
+     * Register any package services.
+     *
+     * @return void
+     */
+    public function register()
     {
-        /*
-         * This class is a Package Service Provider
-         *
-         * More info: https://github.com/spatie/laravel-package-tools
-         */
-        $package
-            ->name('laravel-biometric-auth')
-            ->hasConfigFile()
-            ->hasMigration('create_biometrics_table')
-            ->runsMigrations();
+        $this->mergeConfigFrom(
+            __DIR__.'/../config/biometric-auth.php', 'biometric-auth'
+        );
+    }
+
+    /**
+     * Bootstrap any package services.
+     *
+     * @return void
+     */
+    public function boot()
+    {
+        $this->registerPublishing();
+    }
+
+    /**
+     * Register the package's publishable resources.
+     *
+     * @return void
+     */
+    private function registerPublishing()
+    {
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__.'/../database/migrations' => database_path('migrations'),
+            ], 'biometric-auth-migrations');
+
+            $this->publishes([
+                __DIR__.'/../config/biometric-auth.php' => config_path('biometric-auth.php'),
+            ], 'biometric-auth-config');
+        }
     }
 }
