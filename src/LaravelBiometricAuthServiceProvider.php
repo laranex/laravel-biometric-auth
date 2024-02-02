@@ -6,7 +6,6 @@ namespace Laranex\LaravelBiometricAuth;
 //use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Illuminate\Support\ServiceProvider;
 
-
 class LaravelBiometricAuthServiceProvider extends ServiceProvider
 {
     /**
@@ -17,7 +16,7 @@ class LaravelBiometricAuthServiceProvider extends ServiceProvider
     public function register()
     {
         $this->mergeConfigFrom(
-            __DIR__ . '/../config/biometric-auth.php', 'biometric-auth'
+            __DIR__.'/../config/biometric-auth.php', 'biometric-auth'
         );
     }
 
@@ -41,7 +40,7 @@ class LaravelBiometricAuthServiceProvider extends ServiceProvider
     private function registerMigrations()
     {
         if ($this->app->runningInConsole()) {
-            $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+            $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
         }
     }
 
@@ -54,13 +53,12 @@ class LaravelBiometricAuthServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__ . '/../database/migrations' => database_path('migrations'),
+                __DIR__.'/../database/migrations' => database_path('migrations'),
             ], 'biometric-auth-migrations');
 
             $this->publishes([
-                __DIR__ . '/../config/biometric-auth.php' => config_path('biometric-auth.php'),
+                __DIR__.'/../config/biometric-auth.php' => config_path('biometric-auth.php'),
             ], 'biometric-auth-config');
         }
     }
-
 }
