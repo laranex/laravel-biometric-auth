@@ -2,7 +2,7 @@
 
 namespace Laranex\LaravelBiometricAuth\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Laranex\LaravelBiometricAuth\Traits\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
