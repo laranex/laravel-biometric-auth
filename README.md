@@ -9,6 +9,9 @@
 
 ### openssl 3.0^ is required to work with keys from iOS
 
+*IMPORTANT: This is the 1.x series. Please upgrade to the 2.x series.*
+
+*IMPORTANT: 1.x is for laravel version between ^5.8.x and 9.x Please upgrade to the 2.x to use with laravel 10.x.*
 
 ## Installation
 
@@ -46,7 +49,7 @@ return [
 ```php
 // Use Laranex\LaravelBiometricAuth\Traits\HasBiometris in your Authenticable Model such as User, Admin
 class User extends Authenticatable {
-    use Laranex\LaravelBiometricAuth\Traits\HasBiometricAuth;
+    use Laranex\LaravelBiometricAuth\Traits\HasBiometrics;
 }
 
 // Register a new biometric
