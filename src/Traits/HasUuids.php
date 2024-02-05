@@ -6,7 +6,7 @@ use Illuminate\Support\Str;
 
 trait HasUuids
 {
-   /**
+    /**
      * Boot function from Laravel.
      */
     protected static function boot()
@@ -18,7 +18,8 @@ trait HasUuids
             }
         });
     }
-   /**
+
+    /**
      * Get the value indicating whether the IDs are incrementing.
      *
      * @return bool
@@ -27,7 +28,8 @@ trait HasUuids
     {
         return false;
     }
-   /**
+
+    /**
      * Get the auto-incrementing key type.
      *
      * @return string
