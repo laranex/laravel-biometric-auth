@@ -91,6 +91,7 @@ Please review [our security policy](../../security/policy) on how to report secu
 ## Credits
 
 - [Nay Thu Khant](https://github.com/naythukhant)
+- [Pai Soe Htike](https://github.com/paisoedev)
 - [All Contributors](../../contributors)
 
 ## License
