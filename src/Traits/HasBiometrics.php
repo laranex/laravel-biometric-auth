@@ -2,7 +2,10 @@
 
 namespace Laranex\LaravelBiometricAuth\Traits;
 
+use Laranex\LaravelBiometricAuth\Exceptions\InvalidPublicKeyException;
 use Laranex\LaravelBiometricAuth\Models\Biometric;
+use phpseclib3\Crypt\PublicKeyLoader;
+use phpseclib3\Exception\NoKeyLoadedException;
 use Throwable;
 
 trait HasBiometrics
@@ -10,12 +13,18 @@ trait HasBiometrics
     /**
      * @throws Throwable
      */
-    public function createBiometric(string $publicKey): Biometric
+    public function createBiometric(string $publicKeyBase64): Biometric
     {
+        try {
+            PublicKeyLoader::loadPublicKey(base64_decode($publicKeyBase64));
+        } catch (NoKeyLoadedException $exception) {
+            throw new InvalidPublicKeyException;
+        }
+
         return Biometric::create([
             'authenticable_id' => $this->id,
             'authenticable_type' => get_class($this),
-            'public_key' => $publicKey,
+            'public_key' => $publicKeyBase64,
         ]);
     }
 

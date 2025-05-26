@@ -5,11 +5,8 @@
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/laranex/laravel-biometric-auth/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/laranex/laravel-biometric-auth/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/laranex/laravel-biometric-auth.svg?style=flat-square)](https://packagist.org/packages/laranex/laravel-biometric-auth)
 
-
-
-### openssl 3.0^ is required to work with keys from iOS
-
-*IMPORTANT: 1.x is for laravel version between ^5.8.x and 9.x Please upgrade to the 2.x to use with laravel 10.x.*
+## Supported Public Keys
+https://phpseclib.com/docs/publickeys
 
 ## Installation
 
