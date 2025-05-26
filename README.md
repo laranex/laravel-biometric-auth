@@ -5,6 +5,10 @@
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/laranex/laravel-biometric-auth/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/laranex/laravel-biometric-auth/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/laranex/laravel-biometric-auth.svg?style=flat-square)](https://packagist.org/packages/laranex/laravel-biometric-auth)
 
+![Create Biometric](./docs/CreateBiometric.png)
+![Verify Biometric](./docs/CreateBiometric.png)
+
+
 ## Supported Public Keys
 https://phpseclib.com/docs/publickeys
 
@@ -32,11 +36,19 @@ php artisan vendor:publish --tag="biometric-auth-config"
 This is the contents of the published config file:
 
 ```php
+<?php
+
 return [
     'table' => env('BIOMETRIC_AUTH_TABLE', 'biometrics'),
 
-    'signature_algorithm' => env('BIOMETRIC_AUTH_ALGORITHM', OPENSSL_ALGO_SHA256),
+    // You will need to be explicit about the encryption padding and hash algorithm when working with RSA keys.
+    // For the rest of the algorithms, the package will automatically detect with the help of phpseclib.
+    'rsa' => [
+        'encryption_padding' => \phpseclib3\Crypt\RSA::SIGNATURE_PKCS1,
+        'hash_algorithm' => 'sha256',
+    ],
 ];
+
 ```
 
 ## Usage
@@ -48,16 +60,16 @@ class User extends Authenticatable {
 }
 
 // Register a new biometric
-$user->createBiometric("Public Key in base 64 format, not PEM format");
+$user->createBiometric("Base 64 encoded public key");
 
 // Create a challenge for biometric authentication
 $biometric = Laranex\LaravelBiometricAuth\Facades\LaravelBiometricAuth::getBiometric("UUID of a biometric");
 
-// Get the authenticable instance
-$biometric->instance
-
 // Verify the signature
 Laranex\LaravelBiometricAuth\Facades\LaravelBiometricAuth::verifyBiometric("UUID of a biometric", "Signature");
+
+// Get the user of verified biometric key
+$user = Biometric::find("UUID of a biometric")->instance;
 
 // Revoke a biometric
 $user->revokeBiometric("UUID of a biometric");
