@@ -84,6 +84,10 @@ jobs:
 
       - name: Type Coverage
         if: runner.os != 'Windows'
+        # Analyse in one worker: the type-coverage plugin's forked workers can corrupt its shared cache file
+        # (ParseError in .temp/v3.php) when its 100 ms cache lock times out on a busy runner.
+        env:
+          FORK_MEM_PER_PROC: 1099511627776
         run: composer test:types
 
       - name: Test Suite
