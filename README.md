@@ -5,7 +5,7 @@
 [![Total Downloads](https://img.shields.io/packagist/dt/laranex/laravel-biometric-auth.svg?style=flat-square)](https://packagist.org/packages/laranex/laravel-biometric-auth)
 [![License](https://img.shields.io/packagist/l/laranex/laravel-biometric-auth.svg?style=flat-square)](LICENSE.md)
 
-Passwordless biometric login (Face ID, Touch ID, Android biometrics) for Laravel APIs: devices register a public key, your API issues a challenge, and the package verifies the signed challenge with phpseclib. Built for humans and AI agents.
+Biometric authentication for Laravel: register device public keys, issue single-use challenges and verify signatures. Built for humans and AI agents.
 
 ## Documentation
 
