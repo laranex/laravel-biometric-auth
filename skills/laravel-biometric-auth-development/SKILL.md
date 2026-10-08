@@ -20,7 +20,7 @@ Use this skill when a Laravel API lets mobile or web clients sign in with a devi
 ### 1. Install
 
 - `composer require laranex/laravel-biometric-auth` then `php artisan migrate`; the package loads its own `biometrics` migration
-- publish only to customise: `php artisan vendor:publish --tag="biometric-auth-config"` (table name, challenge attempt limit, RSA padding/hash) or `--tag="biometric-auth-migrations"`; once published the package stops loading its own migration
+- publish only to customize: `php artisan vendor:publish --tag="biometric-auth-config"` (table name, challenge attempt limit, RSA padding/hash) or `--tag="biometric-auth-migrations"`; once published the package stops loading its own migration
 - add `Laranex\LaravelBiometricAuth\Traits\HasBiometrics` to every authenticatable model that may register devices (User, Admin, ...)
 
 ### 2. Register a device (authenticated request)
@@ -42,7 +42,7 @@ Use this skill when a Laravel API lets mobile or web clients sign in with a devi
 
 ## Rules, References, and Templates
 
-- facade: `Laranex\LaravelBiometricAuth\Facades\LaravelBiometricAuth`; model: `Laranex\LaravelBiometricAuth\Models\Biometric` (`public_key` is hidden from serialisation, `active()` scope, `instance` morph-to relation)
+- facade: `Laranex\LaravelBiometricAuth\Facades\LaravelBiometricAuth`; model: `Laranex\LaravelBiometricAuth\Models\Biometric` (`public_key` is hidden from serialization, `active()` scope, `instance` morph-to relation)
 - exceptions live in `Laranex\LaravelBiometricAuth\Exceptions` and extend `BiometricException`: `BiometricNotFoundException` (404), `BiometricChallengeNotFoundException` (422, no pending challenge: request a new one), `InvalidPublicKeyException` (422); `getStatusCode()` returns the status and in JSON requests they render as `{"message": "..."}` with it, so API routes need no try/catch
 
 ## Examples

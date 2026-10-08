@@ -57,7 +57,7 @@ it('verifies EC P-256 and Ed25519 signatures without any configuration', functio
     expect(LaravelBiometricAuth::verifyBiometric($biometric->id, signChallenge($privateKey, $challenge)))->toBeTrue();
 })->with(['secp256r1', 'Ed25519']);
 
-it('honours the configured RSA padding and hash algorithm', function () {
+it('honors the configured RSA padding and hash algorithm', function () {
     config()->set('biometric-auth.rsa.encryption_padding', 'pss');
     config()->set('biometric-auth.rsa.hash_algorithm', 'sha512');
 

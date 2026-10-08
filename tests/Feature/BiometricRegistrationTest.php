@@ -47,7 +47,7 @@ it('rejects a private key where a public key is expected', function () {
     createUser()->createBiometric(base64_encode(rsaPrivateKey()->toString('PKCS8')));
 })->throws(InvalidPublicKeyException::class);
 
-it('never exposes the public key when the biometric is serialised', function () {
+it('never exposes the public key when the biometric is serialized', function () {
     $biometric = createUser()->createBiometric(publicKeyBase64(rsaPrivateKey()))->fresh();
 
     expect($biometric)->toBeInstanceOf(Biometric::class)
