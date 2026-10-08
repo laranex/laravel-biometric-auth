@@ -75,6 +75,13 @@ $user->revokeBiometric($biometricId);
 
 `getBiometric()` reuses the pending challenge until it is verified; a verified challenge is consumed so a captured signature cannot be replayed. A failed verification keeps the challenge for a retry until `biometric-auth.challenge.max_attempts` (default 5) failures, then clears it. Unknown or revoked biometrics throw `BiometricNotFoundException` (404), verifying without a challenge throws `BiometricChallengeNotFoundException` (422), and keys phpseclib cannot load throw `InvalidPublicKeyException` (422); in JSON requests they render as `{"message": "..."}` with that status.
 
+## Built for humans and AI agents
+
+The documentation is written for developers, and the package ships an agent skill so AI coding agents use it the way it's meant to be used.
+
+- **Laravel Boost** installs the skill automatically: run `php artisan boost:install` (or `boost:update`).
+- **Any other agent** (Claude Code, Codex, Cursor and others): `npx skills add laranex/laravel-biometric-auth`.
+
 ## Testing
 
 ```bash
