@@ -1,0 +1,16 @@
+parameters:
+    level: 7
+    phpVersion: 80100
+    paths:
+        - src
+        - config
+        - database
+        - workbench/app
+    tmpDir: build/phpstan
+    configDirectories:
+        - '%currentWorkingDirectory%/config'
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        # Eloquent relation and builder generics changed shape between Laravel 10 and 11+,
+        # so the relations are typed natively instead of with version-specific generics.
+        - identifier: missingType.generics
