@@ -1,6 +1,6 @@
 ---
 name: package-generate-skill
-description: "Use this skill when creating or updating the bundled Laravel Boost skill under resources/boost/skills from the package implementation and package documentation. Trigger after public APIs, commands, config, routes, views, publish tags, README content, or examples change."
+description: "Use this skill when creating or updating the shipped agent skill (resources/boost/skills/laravel-biometric-auth/SKILL.md and its identical copy skills/laravel-biometric-auth/SKILL.md) from the package implementation. Trigger after public APIs, commands, config, routes, views, publish tags, or examples change."
 license: MIT
 metadata:
   author: laravel
@@ -10,15 +10,15 @@ metadata:
 
 ## Primary Goal
 
-Keep the package's bundled Boost skill accurate, concise, and focused on helping Laravel applications adopt the package.
+Keep the package's shipped agent skill accurate, concise, and focused on how an application uses the package. The skill lives at `resources/boost/skills/laravel-biometric-auth/SKILL.md` (Laravel Boost) and an identical copy at `skills/laravel-biometric-auth/SKILL.md` (`npx skills`); `tests/Unit/AgentSkillTest.php` fails when the two differ.
 
 ## Workflow
 
 1. Inspect the package implementation before editing the Boost skill: service provider, facades, public classes, commands, config, routes, migrations, events, views, publish tags, and tests.
-2. Inspect package documentation: `README.md`, contributing docs, examples, and changelog entries that describe user-facing behavior.
+2. Inspect the user-facing behavior described in the changelog and on the documentation website (laranex.vercel.app/laravel-biometric-auth); the README only links there.
 3. Identify the public integration surface only. Include install, configure, publish, command, route, facade, helper, middleware, event, and testing guidance only when the package actually exposes it.
-4. Update `resources/boost/skills/*/SKILL.md` with practical adoption steps, references, examples, and anti-patterns for Laravel app developers using the package.
-5. Preserve front matter, package metadata, and the Boost skill structure: description, primary goal, workflow, references, examples, and anti-patterns.
+4. Update `resources/boost/skills/laravel-biometric-auth/SKILL.md`, then copy it unchanged to `skills/laravel-biometric-auth/SKILL.md`.
+5. Preserve the front matter (`name: laravel-biometric-auth`, description, license, metadata) and the usage-only structure: When to use, Install, Configure, Use (one subsection per feature), Test your app, Avoid. No sections about maintaining, releasing or regenerating the package or the skill.
 6. Validate that the Boost skill does not describe internals as public API and does not document features that are not implemented.
 
 ## Writing Rules
@@ -31,14 +31,14 @@ Keep the package's bundled Boost skill accurate, concise, and focused on helping
 
 ## References
 
-- `resources/boost/skills/`
+- `resources/boost/skills/laravel-biometric-auth/SKILL.md`
+- `skills/laravel-biometric-auth/SKILL.md`
 - `src/*ServiceProvider.php`
 - `src/Facades/`
 - `src/Console/Commands/`
 - `config/*.php`
 - `routes/*.php`
 - `database/migrations/`
-- `README.md`
 - `tests/Feature/` and `tests/Unit/`
 
 ## Examples
