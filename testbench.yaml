@@ -1,4 +1,3 @@
-laravel: '@testbench'
 
 providers:
   # - Workbench\App\Providers\WorkbenchServiceProvider
