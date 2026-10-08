@@ -3,10 +3,14 @@ name: tests
 on:
   push:
     branches:
-      - main
-      - master
-      - '*.x'
+      - '**'
+    tags:
+      - '**'
   pull_request:
+  release:
+    types:
+      - published
+  workflow_dispatch:
 
 permissions:
   contents: read

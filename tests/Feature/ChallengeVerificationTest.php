@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Route;
 use Laranex\LaravelBiometricAuth\Exceptions\BiometricChallengeNotFoundException;
 use Laranex\LaravelBiometricAuth\Exceptions\BiometricNotFoundException;
 use Laranex\LaravelBiometricAuth\Exceptions\InvalidPublicKeyException;
@@ -148,3 +149,81 @@ it('reports a stored public key that can no longer be loaded', function () {
 
     LaravelBiometricAuth::verifyBiometric($biometric->id, base64_encode('signature'));
 })->throws(InvalidPublicKeyException::class);
+
+it('clears the challenge after the configured number of failed attempts', function () {
+    config()->set('biometric-auth.challenge.max_attempts', 3);
+
+    $privateKey = rsaPrivateKey();
+    $biometric = createUser()->createBiometric(publicKeyBase64($privateKey));
+    $challenge = (string) LaravelBiometricAuth::getBiometric($biometric->id)->challenge;
+    $forged = signChallenge(ecPrivateKey(), $challenge);
+
+    expect(LaravelBiometricAuth::verifyBiometric($biometric->id, $forged))->toBeFalse()
+        ->and(LaravelBiometricAuth::verifyBiometric($biometric->id, $forged))->toBeFalse()
+        ->and($biometric->fresh()?->challenge)->toBe($challenge)
+        ->and(LaravelBiometricAuth::verifyBiometric($biometric->id, $forged))->toBeFalse()
+        ->and($biometric->fresh()?->challenge)->toBeNull()
+        ->and(fn () => LaravelBiometricAuth::verifyBiometric($biometric->id, signChallenge($privateKey, $challenge)))
+        ->toThrow(BiometricChallengeNotFoundException::class);
+
+    $fresh = (string) LaravelBiometricAuth::getBiometric($biometric->id)->challenge;
+
+    expect($fresh)->not->toBe($challenge)
+        ->and(LaravelBiometricAuth::verifyBiometric($biometric->id, signChallenge($privateKey, $fresh)))->toBeTrue();
+});
+
+it('limits failed attempts to five by default and resets the count with a new challenge', function () {
+    $privateKey = rsaPrivateKey();
+    $biometric = createUser()->createBiometric(publicKeyBase64($privateKey));
+    $challenge = (string) LaravelBiometricAuth::getBiometric($biometric->id)->challenge;
+
+    foreach (range(1, 4) as $attempt) {
+        expect(LaravelBiometricAuth::verifyBiometric($biometric->id, base64_encode('garbage')))->toBeFalse();
+    }
+
+    expect($biometric->fresh()?->challenge)->toBe($challenge)
+        ->and(LaravelBiometricAuth::verifyBiometric($biometric->id, signChallenge($privateKey, $challenge)))->toBeTrue();
+
+    $next = (string) LaravelBiometricAuth::getBiometric($biometric->id)->challenge;
+
+    foreach (range(1, 4) as $attempt) {
+        LaravelBiometricAuth::verifyBiometric($biometric->id, base64_encode('garbage'));
+    }
+
+    expect($biometric->fresh()?->challenge)->toBe($next);
+
+    LaravelBiometricAuth::verifyBiometric($biometric->id, base64_encode('garbage'));
+
+    expect($biometric->fresh()?->challenge)->toBeNull();
+});
+
+it('does not limit failed attempts when max_attempts is disabled', function (mixed $disabled) {
+    config()->set('biometric-auth.challenge.max_attempts', $disabled);
+
+    $biometric = createUser()->createBiometric(publicKeyBase64(rsaPrivateKey()));
+    $challenge = (string) LaravelBiometricAuth::getBiometric($biometric->id)->challenge;
+
+    foreach (range(1, 10) as $attempt) {
+        LaravelBiometricAuth::verifyBiometric($biometric->id, base64_encode('garbage'));
+    }
+
+    expect($biometric->fresh()?->challenge)->toBe($challenge);
+})->with([0, null]);
+
+it('renders the exceptions as JSON errors with their HTTP status in API requests', function () {
+    Route::get('/biometrics/{id}/challenge', fn (string $id) => ['challenge' => LaravelBiometricAuth::getBiometric($id)->challenge]);
+    Route::post('/biometrics/{id}/verify', fn (string $id) => ['verified' => LaravelBiometricAuth::verifyBiometric($id, 'c2lnbmF0dXJl')]);
+
+    $biometric = createUser()->createBiometric(publicKeyBase64(rsaPrivateKey()));
+
+    $this->getJson('/biometrics/00000000-0000-0000-0000-000000000000/challenge')
+        ->assertStatus(404)
+        ->assertJson(['message' => 'Biometric not found']);
+
+    $this->postJson("/biometrics/{$biometric->id}/verify")
+        ->assertStatus(422)
+        ->assertJson(['message' => 'Biometric challenge not found']);
+
+    $this->getJson("/biometrics/{$biometric->id}/challenge")->assertOk();
+    $this->postJson("/biometrics/{$biometric->id}/verify")->assertOk()->assertExactJson(['verified' => false]);
+});
