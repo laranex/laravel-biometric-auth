@@ -25,4 +25,4 @@ This repository is a Laravel package. Keep the package focused, idiomatic, and e
 - `package-testing`: use when adding or changing package tests with Pest 3/4 and Orchestra Testbench.
 - `package-release`: use when preparing changelog, release notes, tags, or GitHub release workflow changes.
 - `package-compatibility`: use when reviewing code, dependencies, or CI against the PHP and Laravel support matrix.
-- `package-generate-skill`: use when updating the bundled Boost skill from the package implementation, README, and examples.
+- `package-generate-skill`: use when updating the shipped agent skill (`resources/boost/skills/laravel-biometric-auth/SKILL.md` and its identical copy `skills/laravel-biometric-auth/SKILL.md`) from the package implementation.
