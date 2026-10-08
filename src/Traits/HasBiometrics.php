@@ -1,39 +1,59 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Laranex\LaravelBiometricAuth\Traits;
 
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Laranex\LaravelBiometricAuth\Exceptions\BiometricNotFoundException;
 use Laranex\LaravelBiometricAuth\Exceptions\InvalidPublicKeyException;
 use Laranex\LaravelBiometricAuth\Models\Biometric;
-use phpseclib3\Crypt\PublicKeyLoader;
-use phpseclib3\Exception\NoKeyLoadedException;
-use Throwable;
+use Laranex\LaravelBiometricAuth\Support\PublicKey;
 
+/**
+ * @phpstan-require-extends Model
+ */
 trait HasBiometrics
 {
     /**
-     * @throws Throwable
+     * Every biometric ever registered for this model, revoked ones included.
      */
-    public function createBiometric(string $publicKeyBase64): Biometric
+    public function biometrics(): MorphMany
     {
-        try {
-            PublicKeyLoader::loadPublicKey(base64_decode($publicKeyBase64));
-        } catch (NoKeyLoadedException $exception) {
-            throw new InvalidPublicKeyException;
-        }
-
-        return Biometric::create([
-            'authenticable_id' => $this->id,
-            'authenticable_type' => get_class($this),
-            'public_key' => $publicKeyBase64,
-        ]);
+        return $this->morphMany(Biometric::class, 'authenticable');
     }
 
     /**
-     * @throws Throwable
+     * Register a device public key (base64 encoded PEM/DER) for this model.
+     *
+     * @throws InvalidPublicKeyException
+     */
+    public function createBiometric(string $publicKeyBase64): Biometric
+    {
+        PublicKey::load($publicKeyBase64);
+
+        /** @var Biometric $biometric */
+        $biometric = $this->biometrics()->create([
+            'public_key' => $publicKeyBase64,
+        ]);
+
+        return $biometric;
+    }
+
+    /**
+     * Revoke one of this model's active biometrics so it can no longer be challenged or verified.
+     *
+     * @throws BiometricNotFoundException
      */
     public function revokeBiometric(string $biometricId): bool
     {
-        $biometric = Biometric::where(['id' => $biometricId, 'authenticable_id' => $this->id, 'revoked' => false])->first();
+        /** @var Biometric|null $biometric */
+        $biometric = $this->biometrics()->where('id', $biometricId)->where('revoked', false)->first();
+
+        if ($biometric === null) {
+            throw new BiometricNotFoundException;
+        }
 
         return $biometric->update(['revoked' => true]);
     }

@@ -1,12 +1,19 @@
 {
+    "$schema": "https://getcomposer.org/schema.json",
     "name": "laranex/laravel-biometric-auth",
-    "description": "A laravel package to provide asymmetric biometric authentication",
+    "description": "Asymmetric biometric authentication for Laravel: register device public keys, issue challenges and verify signatures",
     "keywords": [
-        "Laranex",
         "laravel",
-        "laravel-biometric-auth"
+        "laranex",
+        "laravel-biometric-auth",
+        "biometric",
+        "authentication",
+        "public-key",
+        "challenge",
+        "signature",
+        "phpseclib"
     ],
-    "homepage": "https://github.com/laranex/laravel-biometric-auth",
+    "homepage": "https://laranex.vercel.app/laravel-biometric-auth",
     "license": "MIT",
     "authors": [
         {
@@ -16,12 +23,19 @@
         }
     ],
     "require": {
-        "php": "^7.0|^8.0",
-        "phpseclib/phpseclib": "^3.0",
-        "spatie/laravel-package-tools": "*"
+        "php": "^8.1",
+        "illuminate/contracts": "^10.0||^11.0||^12.0||^13.0",
+        "illuminate/database": "^10.0||^11.0||^12.0||^13.0",
+        "illuminate/support": "^10.0||^11.0||^12.0||^13.0",
+        "phpseclib/phpseclib": "^3.0.57||^4.0"
     },
     "require-dev": {
-
+        "larastan/larastan": "^2.9.14||^3.9",
+        "laravel/pint": "^1.20||^1.29",
+        "orchestra/testbench": "^8.0||^9.0||^10.0||^11.0",
+        "pestphp/pest": "^2.36||^3.0||^4.6",
+        "pestphp/pest-plugin-type-coverage": "^2.8.7||^3.0||^4.0",
+        "phpstan/extension-installer": "^1.4"
     },
     "autoload": {
         "psr-4": {
@@ -30,14 +44,52 @@
     },
     "autoload-dev": {
         "psr-4": {
-
+            "Laranex\\LaravelBiometricAuth\\Tests\\": "tests/",
+            "Workbench\\App\\": "workbench/app/",
+            "Workbench\\Database\\Factories\\": "workbench/database/factories/",
+            "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
         }
     },
     "scripts": {
-
-    },
-    "config": {
-        "sort-packages": true
+        "post-autoload-dump": [
+            "@clear",
+            "@prepare"
+        ],
+        "prepare": [
+            "@php vendor/bin/testbench package:discover --ansi"
+        ],
+        "build": [
+            "@php vendor/bin/testbench workbench:build --ansi"
+        ],
+        "serve": [
+            "Composer\\Config::disableProcessTimeout",
+            "@build",
+            "@php vendor/bin/testbench serve --ansi"
+        ],
+        "lint": [
+            "vendor/bin/pint"
+        ],
+        "lint:check": [
+            "vendor/bin/pint --test"
+        ],
+        "analyse": [
+            "vendor/bin/phpstan analyse --memory-limit=1G"
+        ],
+        "test:types": [
+            "@php -d memory_limit=-1 vendor/bin/pest --type-coverage --min=100"
+        ],
+        "test:unit": [
+            "vendor/bin/pest --parallel"
+        ],
+        "test": [
+            "@analyse",
+            "@lint:check",
+            "@test:types",
+            "@test:unit"
+        ],
+        "clear": [
+            "@php vendor/bin/testbench package:purge-skeleton --ansi"
+        ]
     },
     "extra": {
         "laravel": {
@@ -49,6 +101,24 @@
             }
         }
     },
-    "minimum-stability": "dev",
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "phpstan/extension-installer": true,
+            "php-http/discovery": true
+        },
+        "policy": {
+            "advisories": {
+                "ignore": {
+                    "laravel/framework": "Dev-only: the package's test matrix installs older Laravel lines; apps resolve their own framework version"
+                },
+                "ignore-id": {
+                    "PKSA-z3gr-8qht-p93v": "Dev-only PHPUnit advisory; needed for the PHP 8.1 test lane"
+                }
+            }
+        }
+    },
+    "minimum-stability": "stable",
     "prefer-stable": true
 }

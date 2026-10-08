@@ -1,14 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
     {
-        Schema::create('biometrics', function (Blueprint $table) {
+        Schema::create($this->table(), function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->string('authenticable_id');
             $table->string('authenticable_type');
@@ -16,11 +21,23 @@ return new class extends Migration
             $table->string('challenge')->nullable();
             $table->boolean('revoked')->default(false);
             $table->timestamps();
+
+            $table->index(['authenticable_type', 'authenticable_id']);
         });
     }
 
-    public function down()
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
     {
-        Schema::dropIfExists('biometrics');
+        Schema::dropIfExists($this->table());
+    }
+
+    private function table(): string
+    {
+        $table = config('biometric-auth.table', 'biometrics');
+
+        return is_string($table) && $table !== '' ? $table : 'biometrics';
     }
 };
