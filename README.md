@@ -73,7 +73,7 @@ Route::post('/biometrics/{id}/verify', function (Request $request, string $id) {
 $user->revokeBiometric($biometricId);
 ```
 
-`getBiometric()` reuses the pending challenge until it is verified; a verified challenge is consumed so a captured signature cannot be replayed. Unknown or revoked biometrics throw `BiometricNotFoundException`, verifying without a challenge throws `BiometricChallengeNotFoundException`, and keys phpseclib cannot load throw `InvalidPublicKeyException`.
+`getBiometric()` reuses the pending challenge until it is verified; a verified challenge is consumed so a captured signature cannot be replayed. A failed verification keeps the challenge for a retry until `biometric-auth.challenge.max_attempts` (default 5) failures, then clears it. Unknown or revoked biometrics throw `BiometricNotFoundException` (404), verifying without a challenge throws `BiometricChallengeNotFoundException` (422), and keys phpseclib cannot load throw `InvalidPublicKeyException` (422); in JSON requests they render as `{"message": "..."}` with that status.
 
 ## Testing
 

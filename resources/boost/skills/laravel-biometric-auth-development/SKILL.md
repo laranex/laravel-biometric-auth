@@ -20,7 +20,7 @@ Use this skill when a Laravel API lets mobile or web clients sign in with a devi
 ### 1. Install
 
 - `composer require laranex/laravel-biometric-auth` then `php artisan migrate`; the package loads its own `biometrics` migration
-- publish only to customise: `php artisan vendor:publish --tag="biometric-auth-config"` (table name, RSA padding/hash) or `--tag="biometric-auth-migrations"`; once published the package stops loading its own migration
+- publish only to customise: `php artisan vendor:publish --tag="biometric-auth-config"` (table name, challenge attempt limit, RSA padding/hash) or `--tag="biometric-auth-migrations"`; once published the package stops loading its own migration
 - add `Laranex\LaravelBiometricAuth\Traits\HasBiometrics` to every authenticatable model that may register devices (User, Admin, ...)
 
 ### 2. Register a device (authenticated request)
@@ -33,7 +33,7 @@ Use this skill when a Laravel API lets mobile or web clients sign in with a devi
 
 - `LaravelBiometricAuth::getBiometric($id)->challenge` returns the pending challenge (64 hex chars), issuing one if none is pending; it is reused until verified
 - the client signs the challenge string after the biometric prompt and sends the base64 signature
-- `LaravelBiometricAuth::verifyBiometric($id, $signatureBase64)` returns `bool`; on `true` the challenge is consumed, then load the owner with `Biometric::query()->findOrFail($id)->instance` (calling `getBiometric()` again would issue a new challenge) and issue your session or token
+- `LaravelBiometricAuth::verifyBiometric($id, $signatureBase64)` returns `bool`; a `false` keeps the challenge for a retry until `biometric-auth.challenge.max_attempts` failures (default 5, `BIOMETRIC_AUTH_CHALLENGE_MAX_ATTEMPTS`, 0 disables; counted in the default cache store), then clears it; on `true` the challenge is consumed, then load the owner with `Biometric::query()->findOrFail($id)->instance` (calling `getBiometric()` again would issue a new challenge) and issue your session or token
 - RSA signatures must use the configured padding/hash (`biometric-auth.rsa`, default PKCS1 v1.5 + SHA-256); EC and Ed25519 keys need no configuration
 
 ### 4. Revoke
@@ -43,7 +43,7 @@ Use this skill when a Laravel API lets mobile or web clients sign in with a devi
 ## Rules, References, and Templates
 
 - facade: `Laranex\LaravelBiometricAuth\Facades\LaravelBiometricAuth`; model: `Laranex\LaravelBiometricAuth\Models\Biometric` (`public_key` is hidden from serialisation, `active()` scope, `instance` morph-to relation)
-- exceptions live in `Laranex\LaravelBiometricAuth\Exceptions`: `BiometricNotFoundException`, `BiometricChallengeNotFoundException`, `InvalidPublicKeyException`
+- exceptions live in `Laranex\LaravelBiometricAuth\Exceptions` and extend `BiometricException`: `BiometricNotFoundException` (404), `BiometricChallengeNotFoundException` (422, no pending challenge: request a new one), `InvalidPublicKeyException` (422); `getStatusCode()` returns the status and in JSON requests they render as `{"message": "..."}` with it, so API routes need no try/catch
 
 ## Examples
 

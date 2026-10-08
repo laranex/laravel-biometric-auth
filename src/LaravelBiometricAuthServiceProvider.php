@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Laranex\LaravelBiometricAuth;
 
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\ServiceProvider;
@@ -19,6 +20,7 @@ class LaravelBiometricAuthServiceProvider extends ServiceProvider
 
         $this->app->singleton(LaravelBiometricAuth::class, fn (Container $app): LaravelBiometricAuth => new LaravelBiometricAuth(
             $app->make(ConfigRepository::class),
+            $app->make(CacheRepository::class),
         ));
     }
 

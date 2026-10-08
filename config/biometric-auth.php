@@ -19,6 +19,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Challenges
+    |--------------------------------------------------------------------------
+    |
+    | A failed verification keeps the pending challenge so the device can
+    | retry. After "max_attempts" failed verifications of the same challenge
+    | it is cleared and the client must request a new one. Attempts are
+    | counted in the application's default cache store. Set it to 0 or null
+    | to disable the limit.
+    |
+    */
+
+    'challenge' => [
+        'max_attempts' => env('BIOMETRIC_AUTH_CHALLENGE_MAX_ATTEMPTS', 5),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | RSA Signature Settings
     |--------------------------------------------------------------------------
     |
