@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Config;
 
 /**
  * @property string $id
@@ -46,7 +47,7 @@ class Biometric extends Model
      */
     public function getTable(): string
     {
-        $table = config('biometric-auth.table');
+        $table = Config::get('biometric-auth.table');
 
         return is_string($table) && $table !== '' ? $table : parent::getTable();
     }
