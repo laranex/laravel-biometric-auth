@@ -22,15 +22,18 @@ return [
     | Challenges
     |--------------------------------------------------------------------------
     |
-    | A failed verification keeps the pending challenge so the device can
-    | retry. After "max_attempts" failed verifications of the same challenge
-    | it is cleared and the client must request a new one. Attempts are
-    | counted in the application's default cache store. Set it to 0 or null
-    | to disable the limit.
+    | A challenge expires "ttl" seconds after it was issued; the next
+    | getBiometric() call issues a fresh one. A failed verification keeps
+    | the pending challenge so the device can retry. After "max_attempts"
+    | failed verifications of the same challenge it is cleared and the
+    | client must request a new one. Attempts are counted in the
+    | application's default cache store. Set either option to 0 or null
+    | to disable it.
     |
     */
 
     'challenge' => [
+        'ttl' => env('BIOMETRIC_AUTH_CHALLENGE_TTL', 300),
         'max_attempts' => env('BIOMETRIC_AUTH_CHALLENGE_MAX_ATTEMPTS', 5),
     ],
 

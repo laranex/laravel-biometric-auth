@@ -6,6 +6,8 @@ namespace Laranex\LaravelBiometricAuth;
 
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 use Laranex\LaravelBiometricAuth\Exceptions\BiometricChallengeNotFoundException;
 use Laranex\LaravelBiometricAuth\Exceptions\BiometricNotFoundException;
 use Laranex\LaravelBiometricAuth\Exceptions\InvalidPublicKeyException;
@@ -22,8 +24,8 @@ class LaravelBiometricAuth
     /**
      * Load an active biometric and make sure it carries a challenge for the device to sign.
      *
-     * The challenge is reused until it has been verified, so calling this twice before
-     * the device answers does not invalidate the first challenge.
+     * The challenge is reused until it has been verified or has expired, so calling this
+     * twice before the device answers does not invalidate the first challenge.
      *
      * @throws BiometricNotFoundException
      */
@@ -31,9 +33,14 @@ class LaravelBiometricAuth
     {
         $biometric = $this->getActiveBiometric($biometricId);
 
-        if ($biometric->challenge === null || $biometric->challenge === '') {
-            $biometric->update(['challenge' => $this->generateChallenge()]);
+        if ($this->hasPendingChallenge($biometric)) {
+            return $biometric;
         }
+
+        // Only replace the challenge this request has seen, so concurrent requests agree on one challenge.
+        $this->whereChallenge($biometric, $biometric->challenge)->update(['challenge' => $this->generateChallenge()]);
+
+        $biometric->refresh();
 
         return $biometric;
     }
@@ -44,6 +51,7 @@ class LaravelBiometricAuth
      * A successfully verified challenge is consumed, so a captured signature cannot be replayed:
      * the next call to getBiometric() issues a fresh challenge. Failed attempts keep the challenge
      * for a retry until `biometric-auth.challenge.max_attempts` is reached, then it is cleared too.
+     * A challenge older than `biometric-auth.challenge.ttl` seconds is cleared without being checked.
      *
      * @throws BiometricNotFoundException
      * @throws BiometricChallengeNotFoundException
@@ -58,18 +66,29 @@ class LaravelBiometricAuth
             throw new BiometricChallengeNotFoundException;
         }
 
-        $verified = $this->loadPublicKey($biometric->public_key)->verify($challenge, base64_decode($signature));
+        if ($this->challengeHasExpired($biometric)) {
+            $this->clearChallenge($biometric, $challenge);
+
+            throw new BiometricChallengeNotFoundException;
+        }
+
+        $decoded = base64_decode($signature, true);
+
+        $verified = $decoded !== false
+            && $decoded !== ''
+            && $this->loadPublicKey($biometric->public_key)->verify($challenge, $decoded);
 
         $attemptsKey = $this->attemptsKey($biometric, $challenge);
 
         if ($verified) {
-            $biometric->update(['challenge' => null]);
             $this->cache->forget($attemptsKey);
 
-            return true;
+            // Consume the challenge atomically: when the same signature arrives twice at once,
+            // only the request that actually clears the challenge is verified.
+            return $this->clearChallenge($biometric, $challenge);
         }
 
-        $this->recordFailedAttempt($biometric, $attemptsKey);
+        $this->recordFailedAttempt($biometric, $challenge, $attemptsKey);
 
         return false;
     }
@@ -77,9 +96,9 @@ class LaravelBiometricAuth
     /**
      * Count a failed verification and clear the challenge once the configured limit is reached.
      */
-    private function recordFailedAttempt(Biometric $biometric, string $attemptsKey): void
+    private function recordFailedAttempt(Biometric $biometric, string $challenge, string $attemptsKey): void
     {
-        $maxAttempts = $this->maxAttempts();
+        $maxAttempts = $this->positiveIntegerConfig('biometric-auth.challenge.max_attempts', 5);
 
         if ($maxAttempts === null) {
             return;
@@ -93,22 +112,74 @@ class LaravelBiometricAuth
             return;
         }
 
-        $biometric->update(['challenge' => null]);
+        $this->clearChallenge($biometric, $challenge);
         $this->cache->forget($attemptsKey);
     }
 
     /**
-     * The configured failed attempt limit per challenge, or null when the limit is disabled.
+     * Whether the biometric carries a challenge that has not expired yet.
      */
-    private function maxAttempts(): ?int
+    private function hasPendingChallenge(Biometric $biometric): bool
     {
-        $maxAttempts = $this->config->get('biometric-auth.challenge.max_attempts', 5);
+        return $biometric->challenge !== null
+            && $biometric->challenge !== ''
+            && ! $this->challengeHasExpired($biometric);
+    }
 
-        if (! is_numeric($maxAttempts)) {
+    /**
+     * Whether the pending challenge is older than the configured lifetime.
+     *
+     * A challenge is only ever written together with the row's updated_at timestamp, which
+     * therefore records when it was issued.
+     */
+    private function challengeHasExpired(Biometric $biometric): bool
+    {
+        $ttl = $this->positiveIntegerConfig('biometric-auth.challenge.ttl', 300);
+
+        if ($ttl === null) {
+            return false;
+        }
+
+        return $biometric->updated_at === null || $biometric->updated_at->copy()->addSeconds($ttl)->isPast();
+    }
+
+    /**
+     * Clear the given challenge if it is still the pending one; true when this call cleared it.
+     */
+    private function clearChallenge(Biometric $biometric, string $challenge): bool
+    {
+        return $this->whereChallenge($biometric, $challenge)->update(['challenge' => null]) === 1;
+    }
+
+    /**
+     * A query for the active biometric while it still carries the given challenge.
+     *
+     * @return Builder<Biometric>
+     */
+    private function whereChallenge(Biometric $biometric, ?string $challenge): Builder
+    {
+        return Biometric::query()
+            ->whereKey($biometric->getKey())
+            ->where('revoked', false)
+            ->when(
+                $challenge === null,
+                fn (Builder $query): Builder => $query->whereNull('challenge'),
+                fn (Builder $query): Builder => $query->where('challenge', $challenge),
+            );
+    }
+
+    /**
+     * A positive integer option, or null when it is disabled (0, null or not numeric).
+     */
+    private function positiveIntegerConfig(string $key, int $default): ?int
+    {
+        $value = $this->config->get($key, $default);
+
+        if (! is_numeric($value)) {
             return null;
         }
 
-        return (int) $maxAttempts > 0 ? (int) $maxAttempts : null;
+        return (int) $value > 0 ? (int) $value : null;
     }
 
     /**
@@ -124,6 +195,11 @@ class LaravelBiometricAuth
      */
     private function getActiveBiometric(string $biometricId): Biometric
     {
+        // Ids are UUIDs: anything else cannot match and would fail on databases with a native uuid type.
+        if (! Str::isUuid($biometricId)) {
+            throw new BiometricNotFoundException;
+        }
+
         $biometric = Biometric::query()->whereKey($biometricId)->where('revoked', false)->first();
 
         if (! $biometric instanceof Biometric) {

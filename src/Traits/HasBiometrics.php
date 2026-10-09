@@ -6,6 +6,7 @@ namespace Laranex\LaravelBiometricAuth\Traits;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Str;
 use Laranex\LaravelBiometricAuth\Exceptions\BiometricNotFoundException;
 use Laranex\LaravelBiometricAuth\Exceptions\InvalidPublicKeyException;
 use Laranex\LaravelBiometricAuth\Models\Biometric;
@@ -48,8 +49,12 @@ trait HasBiometrics
      */
     public function revokeBiometric(string $biometricId): bool
     {
+        if (! Str::isUuid($biometricId)) {
+            throw new BiometricNotFoundException;
+        }
+
         /** @var Biometric|null $biometric */
-        $biometric = $this->biometrics()->where('id', $biometricId)->where('revoked', false)->first();
+        $biometric = $this->biometrics()->whereKey($biometricId)->where('revoked', false)->first();
 
         if ($biometric === null) {
             throw new BiometricNotFoundException;

@@ -45,6 +45,7 @@ php artisan vendor:publish --tag="biometric-auth-migrations"  # once published, 
 `config/biometric-auth.php`:
 
 - `table` (`BIOMETRIC_AUTH_TABLE`, default `biometrics`): the table that stores the public keys and pending challenges.
+- `challenge.ttl` (`BIOMETRIC_AUTH_CHALLENGE_TTL`, default `300`): seconds a challenge stays valid after it was issued; `0` or `null` disables expiry.
 - `challenge.max_attempts` (`BIOMETRIC_AUTH_CHALLENGE_MAX_ATTEMPTS`, default `5`): failed verifications allowed per challenge before it is cleared; `0` or `null` disables the limit. Attempts are counted in the default cache store.
 - `rsa.encryption_padding` (`pkcs1` by default, or `pss`) and `rsa.hash_algorithm` (`sha256` by default): must match how the app signs with an RSA key. EC and Ed25519 keys need no configuration.
 
@@ -56,7 +57,7 @@ The client generates a key pair and sends the base64 encoded public key (PEM or 
 
 ```php
 Route::post('/biometrics', function (Request $request) {
-    $biometric = $request->user()->createBiometric($request->string('public_key'));
+    $biometric = $request->user()->createBiometric($request->string('public_key')->toString());
 
     return ['biometric_id' => $biometric->id];
 })->middleware('auth:sanctum');
@@ -74,17 +75,17 @@ Route::post('/biometrics/{id}/challenge', fn (string $id) => [
 ])->middleware('throttle:10,1');
 ```
 
-`getBiometric()` issues a random challenge (64 hex characters) when none is pending and reuses it until it is verified.
+`getBiometric()` issues a random challenge (64 hex characters) when none is pending and reuses it until it is verified or expires (`challenge.ttl`, 5 minutes by default). Ids that are not UUIDs throw `BiometricNotFoundException`.
 
 ### Verify the signed challenge (guest request)
 
-The client signs the challenge string after the biometric prompt and sends the base64 signature.
+The client signs the challenge string after the biometric prompt and sends the signature in standard base64.
 
 ```php
 use Laranex\LaravelBiometricAuth\Models\Biometric;
 
 Route::post('/biometrics/{id}/verify', function (Request $request, string $id) {
-    abort_unless(LaravelBiometricAuth::verifyBiometric($id, $request->string('signature')), 401);
+    abort_unless(LaravelBiometricAuth::verifyBiometric($id, $request->string('signature')->toString()), 401);
 
     $user = Biometric::query()->findOrFail($id)->instance;
 
@@ -92,7 +93,7 @@ Route::post('/biometrics/{id}/verify', function (Request $request, string $id) {
 })->middleware('throttle:10,1');
 ```
 
-- `verifyBiometric()` returns `true` and consumes the challenge, so a captured signature cannot be replayed.
+- `verifyBiometric()` returns `true` and consumes the challenge atomically, so a captured signature cannot be replayed, not even by a concurrent request.
 - A `false` keeps the challenge for a retry until `challenge.max_attempts` failures, then clears it.
 - Load the owner with `Biometric::query()->findOrFail($id)->instance`. Calling `getBiometric()` again after a successful verification would issue a new challenge.
 
@@ -109,7 +110,7 @@ $request->user()->revokeBiometric($biometricId);
 All exceptions live in `Laranex\LaravelBiometricAuth\Exceptions` and extend `BiometricException`. In JSON requests they render as `{"message": "..."}` with their status, so API routes need no try/catch. `getStatusCode()` returns the status.
 
 - `BiometricNotFoundException` (404): unknown or revoked biometric id, from every method.
-- `BiometricChallengeNotFoundException` (422): verifying with no pending challenge; request a new one.
+- `BiometricChallengeNotFoundException` (422): verifying with no pending challenge (never issued, already used, too many failures or expired); request a new one.
 - `InvalidPublicKeyException` (422): the public key cannot be loaded.
 
 ## Test your app
