@@ -26,7 +26,7 @@ Add package features in the right place and wire them through the service provid
 1. Keep provider wiring in `register()` or `boot()` unless extracting a method makes a real repeated concern clearer.
 2. Put container bindings and `mergeConfigFrom` calls in `register()` when the host app must be able to override configuration.
 3. Put resource loading in boot-time methods with Laravel-native APIs such as `loadRoutesFrom`, `loadViewsFrom`, and `loadTranslationsFrom`.
-4. Guard console-only publishing and command registration with `runningInConsole()` before calling `publishes`, `publishesMigrations`, or `commands`.
+4. Guard console-only publishing and command registration with `runningInConsole()` before calling `publishes` or `commands` (`publishesMigrations` needs Laravel 11+, so it cannot be used while Laravel 10 is supported).
 5. Name publish tags with the `biometric-auth-*` convention so consumers can target individual resource groups.
 6. Add tests for the observable provider behavior: merged config, loaded routes, publish tags, or command registration.
 
@@ -52,7 +52,7 @@ Provider wiring anti-patterns:
 ## Examples
 
 - Add an Artisan command: create the command class under `src/Console/Commands`, register it in the `commands` array inside the `runningInConsole()` guard, add a feature test for observable console output, and document the command if it is user-facing.
-- Add a publishable migration: place the migration in `database/migrations`, wire it through a console-guarded `publishesMigrations` call with a `biometric-auth-migrations` tag, and test publish behavior with Testbench.
+- Add a publishable migration: place the migration in `database/migrations`, wire it through a console-guarded `publishes` call with a `biometric-auth-migrations` tag (as the provider does today), and test publish behavior with Testbench.
 - Wire a new publish tag by adding a `publishes` map inside the existing console-guarded publishing method and naming the tag with `biometric-auth-*`.
 
 ## Anti-Patterns
