@@ -14,6 +14,7 @@ it('merges the default configuration', function () {
     expect(config('biometric-auth.table'))->toBe('biometrics')
         ->and(config('biometric-auth.rsa.encryption_padding'))->toBe('pkcs1')
         ->and(config('biometric-auth.rsa.hash_algorithm'))->toBe('sha256')
+        ->and(config('biometric-auth.challenge.ttl'))->toBe(300)
         ->and(config('biometric-auth.challenge.max_attempts'))->toBe(5);
 });
 

@@ -227,3 +227,92 @@ it('renders the exceptions as JSON errors with their HTTP status in API requests
     $this->getJson("/biometrics/{$biometric->id}/challenge")->assertOk();
     $this->postJson("/biometrics/{$biometric->id}/verify")->assertOk()->assertExactJson(['verified' => false]);
 });
+
+it('issues a fresh challenge once the pending one has expired', function () {
+    $biometric = createUser()->createBiometric(publicKeyBase64(rsaPrivateKey()));
+    $challenge = LaravelBiometricAuth::getBiometric($biometric->id)->challenge;
+
+    $this->travel(299)->seconds();
+
+    expect(LaravelBiometricAuth::getBiometric($biometric->id)->challenge)->toBe($challenge);
+
+    $this->travel(2)->seconds();
+
+    $fresh = LaravelBiometricAuth::getBiometric($biometric->id)->challenge;
+
+    expect($fresh)->toMatch('/^[0-9a-f]{64}$/')->not->toBe($challenge)
+        ->and($biometric->fresh()?->challenge)->toBe($fresh);
+});
+
+it('refuses to verify an expired challenge and clears it', function () {
+    config()->set('biometric-auth.challenge.ttl', 60);
+
+    $privateKey = rsaPrivateKey();
+    $biometric = createUser()->createBiometric(publicKeyBase64($privateKey));
+    $signature = signChallenge($privateKey, (string) LaravelBiometricAuth::getBiometric($biometric->id)->challenge);
+
+    $this->travel(61)->seconds();
+
+    expect(fn () => LaravelBiometricAuth::verifyBiometric($biometric->id, $signature))
+        ->toThrow(BiometricChallengeNotFoundException::class)
+        ->and($biometric->fresh()?->challenge)->toBeNull();
+});
+
+it('never expires challenges when the ttl is disabled', function (mixed $disabled) {
+    config()->set('biometric-auth.challenge.ttl', $disabled);
+
+    $privateKey = rsaPrivateKey();
+    $biometric = createUser()->createBiometric(publicKeyBase64($privateKey));
+    $challenge = (string) LaravelBiometricAuth::getBiometric($biometric->id)->challenge;
+
+    $this->travel(30)->days();
+
+    expect(LaravelBiometricAuth::getBiometric($biometric->id)->challenge)->toBe($challenge)
+        ->and(LaravelBiometricAuth::verifyBiometric($biometric->id, signChallenge($privateKey, $challenge)))->toBeTrue();
+})->with([0, null]);
+
+it('treats an id that is not a UUID as an unknown biometric', function (string $method) {
+    expect(fn () => match ($method) {
+        'getBiometric' => LaravelBiometricAuth::getBiometric('1 OR 1=1'),
+        'verifyBiometric' => LaravelBiometricAuth::verifyBiometric('not-a-uuid', base64_encode('signature')),
+        'revokeBiometric' => createUser()->revokeBiometric('42'),
+    })->toThrow(BiometricNotFoundException::class);
+})->with(['getBiometric', 'verifyBiometric', 'revokeBiometric']);
+
+it('rejects a signature that is not valid base64 as a failed attempt', function () {
+    config()->set('biometric-auth.challenge.max_attempts', 2);
+
+    $biometric = createUser()->createBiometric(publicKeyBase64(rsaPrivateKey()));
+    LaravelBiometricAuth::getBiometric($biometric->id);
+
+    expect(LaravelBiometricAuth::verifyBiometric($biometric->id, 'not base64!'))->toBeFalse()
+        ->and(LaravelBiometricAuth::verifyBiometric($biometric->id, ''))->toBeFalse()
+        ->and($biometric->fresh()?->challenge)->toBeNull();
+});
+
+it('verifies a signature only once when two requests race for the same challenge', function () {
+    $privateKey = rsaPrivateKey();
+    $biometric = createUser()->createBiometric(publicKeyBase64($privateKey));
+    $signature = signChallenge($privateKey, (string) LaravelBiometricAuth::getBiometric($biometric->id)->challenge);
+
+    // Another request consumes the challenge right after this one has loaded the biometric.
+    Biometric::retrieved(function (Biometric $loaded): void {
+        Biometric::query()->whereKey($loaded->id)->update(['challenge' => null]);
+    });
+
+    expect(LaravelBiometricAuth::verifyBiometric($biometric->id, $signature))->toBeFalse();
+});
+
+it('returns the challenge a concurrent request issued instead of overwriting it', function () {
+    $biometric = createUser()->createBiometric(publicKeyBase64(rsaPrivateKey()));
+    $concurrent = str_repeat('a', 64);
+
+    // Another request issues a challenge right after this one has loaded the biometric.
+    Biometric::retrieved(function (Biometric $loaded) use ($concurrent): void {
+        if ($loaded->challenge === null) {
+            Biometric::query()->whereKey($loaded->id)->update(['challenge' => $concurrent]);
+        }
+    });
+
+    expect(LaravelBiometricAuth::getBiometric($biometric->id)->challenge)->toBe($concurrent);
+});
