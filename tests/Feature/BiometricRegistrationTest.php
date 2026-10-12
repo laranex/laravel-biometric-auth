@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Str;
 use Laranex\LaravelBiometricAuth\Exceptions\BiometricNotFoundException;
 use Laranex\LaravelBiometricAuth\Exceptions\InvalidPublicKeyException;
+use Laranex\LaravelBiometricAuth\Facades\LaravelBiometricAuth;
 use Laranex\LaravelBiometricAuth\Models\Biometric;
 use Workbench\App\Models\User;
 
@@ -87,13 +88,30 @@ it('rejects a private key where a public key is expected', function () {
     createUser()->createBiometric(base64_encode(rsaPrivateKey()->toString('PKCS8')));
 })->throws(InvalidPublicKeyException::class);
 
-it('never exposes the public key when the biometric is serialized', function () {
-    $biometric = createUser()->createBiometric(publicKeyBase64(rsaPrivateKey()))->fresh();
+it('never exposes the public key, the challenge or the owner when the biometric is serialized', function () {
+    $biometric = createUser()->createBiometric(publicKeyBase64(rsaPrivateKey()));
+    LaravelBiometricAuth::getBiometric($biometric->id);
+    $biometric = $biometric->fresh();
 
     expect($biometric)->toBeInstanceOf(Biometric::class)
-        ->and($biometric?->toArray())->not->toHaveKey('public_key')
-        ->toHaveKeys(['id', 'authenticable_id', 'authenticable_type', 'challenge', 'revoked'])
-        ->and(json_decode((string) $biometric?->toJson(), true))->not->toHaveKey('public_key');
+        ->and($biometric?->challenge)->toBeString()
+        ->and($biometric?->toArray())->toHaveKeys(['id', 'revoked', 'created_at', 'updated_at'])
+        ->not->toHaveKeys(['public_key', 'challenge', 'authenticable_id', 'authenticable_type'])
+        ->and(json_decode((string) $biometric?->toJson(), true))->not->toHaveKeys(['public_key', 'challenge', 'authenticable_id', 'authenticable_type']);
+});
+
+it('only mass assigns the public key', function () {
+    $biometric = new Biometric([
+        'id' => '00000000-0000-0000-0000-000000000000',
+        'authenticable_id' => '1',
+        'authenticable_type' => 'App\Models\Admin',
+        'public_key' => 'key',
+        'challenge' => 'chosen',
+        'challenge_issued_at' => '2020-01-01 00:00:00',
+        'revoked' => true,
+    ]);
+
+    expect($biometric->getAttributes())->toBe(['public_key' => 'key']);
 });
 
 it('revokes a biometric so it is no longer active', function () {

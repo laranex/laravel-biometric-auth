@@ -140,7 +140,7 @@ it('treats a revoked biometric as not found', function () {
 });
 
 it('reports a stored public key that can no longer be loaded', function () {
-    $biometric = Biometric::query()->create([
+    $biometric = Biometric::query()->forceCreate([
         'authenticable_id' => '1',
         'authenticable_type' => 'App\Models\User',
         'public_key' => base64_encode('corrupted'),

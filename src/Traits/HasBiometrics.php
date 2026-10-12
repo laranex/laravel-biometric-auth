@@ -60,6 +60,6 @@ trait HasBiometrics
             throw new BiometricNotFoundException;
         }
 
-        return $biometric->update(['revoked' => true]);
+        return $biometric->forceFill(['revoked' => true])->save();
     }
 }

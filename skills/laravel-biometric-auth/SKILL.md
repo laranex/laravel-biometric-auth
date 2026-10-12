@@ -103,7 +103,7 @@ Route::post('/biometrics/{id}/verify', function (Request $request, string $id) {
 $request->user()->revokeBiometric($biometricId);
 ```
 
-`$user->biometrics()` lists every registered key, revoked ones included; `Biometric::query()->active()` returns only active keys. `public_key` is hidden from serialization.
+`$user->biometrics()` lists every registered key, revoked ones included; `Biometric::query()->active()` returns only active keys. `public_key`, `challenge`, `authenticable_id` and `authenticable_type` are hidden from serialization, and only `public_key` is mass assignable.
 
 ### Errors
 

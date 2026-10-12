@@ -31,16 +31,18 @@ class Biometric extends Model
     /**
      * The attributes that are mass assignable.
      *
+     * The owner, the challenge and the revoked flag are only ever written by the package itself.
+     *
      * @var list<string>
      */
-    protected $fillable = ['id', 'authenticable_id', 'authenticable_type', 'public_key', 'challenge', 'revoked'];
+    protected $fillable = ['public_key'];
 
     /**
      * The attributes that should be hidden for serialization.
      *
      * @var list<string>
      */
-    protected $hidden = ['public_key'];
+    protected $hidden = ['public_key', 'challenge', 'authenticable_id', 'authenticable_type'];
 
     /**
      * Get the table associated with the model.
