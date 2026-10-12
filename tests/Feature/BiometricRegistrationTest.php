@@ -173,6 +173,25 @@ it('refuses to revoke a biometric twice', function () {
     $user->revokeBiometric($biometric->id);
 })->throws(BiometricNotFoundException::class, 'Biometric not found');
 
+it('revokes every active biometric of the model and returns the count', function () {
+    $user = createUser();
+    $other = createUser('other@example.com');
+    $revoked = $user->createBiometric(publicKeyBase64(ecPrivateKey()));
+    $user->revokeBiometric($revoked->id);
+    $pending = $user->createBiometric(publicKeyBase64(ecPrivateKey()));
+    $user->createBiometric(publicKeyBase64(ecPrivateKey()));
+    $kept = $other->createBiometric(publicKeyBase64(ecPrivateKey()));
+    LaravelBiometricAuth::getBiometric($pending->id);
+
+    expect($user->revokeAllBiometrics())->toBe(2)
+        ->and($user->biometrics()->active()->count())->toBe(0)
+        ->and($pending->fresh()?->challenge)->toBeNull()
+        ->and($pending->fresh()?->challenge_issued_at)->toBeNull()
+        ->and((bool) $kept->fresh()?->revoked)->toBeFalse()
+        ->and($user->revokeAllBiometrics())->toBe(0)
+        ->and(fn () => LaravelBiometricAuth::getBiometric($pending->id))->toThrow(BiometricNotFoundException::class);
+});
+
 it('refuses to revoke a biometric that belongs to someone else', function () {
     $owner = createUser('owner@example.com');
     $biometric = $owner->createBiometric(publicKeyBase64(rsaPrivateKey()));

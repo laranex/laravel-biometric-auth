@@ -74,4 +74,17 @@ trait HasBiometrics
 
         return $biometric->forceFill(['revoked' => true, 'challenge' => null, 'challenge_issued_at' => null])->save();
     }
+
+    /**
+     * Revoke every active biometric of this model, for example after a password change or a
+     * suspected compromise, and return how many were revoked.
+     */
+    public function revokeAllBiometrics(): int
+    {
+        return $this->biometrics()->where('revoked', false)->update([
+            'revoked' => true,
+            'challenge' => null,
+            'challenge_issued_at' => null,
+        ]);
+    }
 }

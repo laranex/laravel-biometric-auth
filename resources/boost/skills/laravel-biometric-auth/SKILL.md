@@ -112,6 +112,12 @@ Route::post('/biometrics/{id}/verify', function (Request $request, string $id) {
 $request->user()->revokeBiometric($biometricId);
 ```
 
+Revoke every device when the password changes or the account may be compromised; `revokeAllBiometrics()` returns how many active biometrics it revoked:
+
+```php
+$user->revokeAllBiometrics();
+```
+
 `$user->biometrics()` lists every registered key, revoked ones included; `Biometric::query()->active()` returns only active keys. `public_key`, `challenge`, `authenticable_id` and `authenticable_type` are hidden from serialization, and only `public_key` is mass assignable.
 
 ### Errors
@@ -149,6 +155,7 @@ it('logs in with a biometric and rejects a replayed signature', function () {
 
 - Treating a known biometric id as proof of identity: only a `true` from `verifyBiometric()` is.
 - Enrolling a device on a bearer token alone, without a fresh password or OTP check and a new-device notification.
+- Keeping biometrics active after a password reset; call `revokeAllBiometrics()`.
 - Leaving the challenge and verify routes unthrottled.
 - Storing or logging private keys or signatures; the server only needs the public key.
 - Catching `BiometricNotFoundException` to fall back to another biometric; ask the client to register again.

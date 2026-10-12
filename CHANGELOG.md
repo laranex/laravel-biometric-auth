@@ -23,6 +23,7 @@ All notable changes to `laravel-biometric-auth` will be documented in this file.
 - `verifyBiometric()` decodes the signature as strict base64; an invalid or empty signature returns `false` and counts as a failed attempt.
 - `createBiometric()` only accepts EC P-256, EC P-384, Ed25519 and 2048 to 4096-bit RSA keys, given as strict base64 of at most 8 KiB; DSA, other curves and other RSA sizes throw `InvalidPublicKeyException`, also when a stored key is verified.
 - New `max_per_user` option (`BIOMETRIC_AUTH_MAX_PER_USER`, default 10): `createBiometric()` throws the new `TooManyBiometricsException` (422) once the model has that many active biometrics; `0` or `null` disables the limit.
+- New `HasBiometrics::revokeAllBiometrics()` revokes every active biometric of the model and returns the count; call it on a password change or a suspected compromise.
 - `Biometric` only mass assigns `public_key` (the owner, challenge and revoked flag are set by the package) and also hides `challenge`, `authenticable_id` and `authenticable_type` from serialization.
 - Requires `illuminate/http` (installed with every Laravel application) for rendering the exceptions.
 - Supports phpseclib 3 (3.0.57+) and phpseclib 4. phpseclib 4 moved to the `phpseclib4` namespace and renumbered the RSA signature constants, so `biometric-auth.rsa.encryption_padding` now takes a name, `'pkcs1'` (default) or `'pss'` (`'relaxed_pkcs1'` on phpseclib 3 only); a raw `RSA::SIGNATURE_*` integer from the installed phpseclib is still accepted. Unknown names throw `InvalidArgumentException`.
