@@ -42,6 +42,14 @@ function rsaPrivateKey(string $padding = 'pkcs1', string $hash = 'sha256'): obje
 }
 
 /**
+ * Generate an RSA key pair with a modulus of the given number of bits.
+ */
+function rsaKeyOfSize(int $bits): object
+{
+    return call_user_func([phpseclib('Crypt\RSA'), 'createKey'], $bits);
+}
+
+/**
  * Generate an EC key pair on the given curve (P-256 by default, or Ed25519).
  */
 function ecPrivateKey(string $curve = 'secp256r1'): object

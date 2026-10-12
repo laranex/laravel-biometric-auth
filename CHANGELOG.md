@@ -21,6 +21,7 @@ All notable changes to `laravel-biometric-auth` will be documented in this file.
 - Challenges are issued and consumed with conditional updates, so two concurrent verifications of the same signature cannot both succeed and concurrent `getBiometric()` calls agree on one challenge.
 - `getBiometric()`, `verifyBiometric()` and `revokeBiometric()` throw `BiometricNotFoundException` for an id that is not a UUID instead of querying the database (which failed on PostgreSQL's native `uuid` column).
 - `verifyBiometric()` decodes the signature as strict base64; an invalid or empty signature returns `false` and counts as a failed attempt.
+- `createBiometric()` only accepts EC P-256, EC P-384, Ed25519 and 2048 to 4096-bit RSA keys, given as strict base64 of at most 8 KiB; DSA, other curves and other RSA sizes throw `InvalidPublicKeyException`, also when a stored key is verified.
 - Requires `illuminate/http` (installed with every Laravel application) for rendering the exceptions.
 - Supports phpseclib 3 (3.0.57+) and phpseclib 4. phpseclib 4 moved to the `phpseclib4` namespace and renumbered the RSA signature constants, so `biometric-auth.rsa.encryption_padding` now takes a name, `'pkcs1'` (default) or `'pss'` (`'relaxed_pkcs1'` on phpseclib 3 only); a raw `RSA::SIGNATURE_*` integer from the installed phpseclib is still accepted. Unknown names throw `InvalidArgumentException`.
 - Everything is strictly typed; the migration and the model read the table name from `biometric-auth.table`.
@@ -29,6 +30,7 @@ All notable changes to `laravel-biometric-auth` will be documented in this file.
 ### Upgrading
 - Require PHP 8.1 or higher and Laravel 10 or higher (Laravel 9 is no longer supported), then `composer require laranex/laravel-biometric-auth:^4.0`.
 - No database changes: the `biometrics` table and its columns are unchanged. If you published the migration under v3, keep it; the package detects it and no longer loads its own copy.
+- Devices registered with a key outside the accepted types (for example RSA 1024 or DSA) now fail with `InvalidPublicKeyException`; ask them to register again.
 - If you published `config/biometric-auth.php`, replace `\phpseclib3\Crypt\RSA::SIGNATURE_PKCS1` with `'pkcs1'` (or `SIGNATURE_PSS` with `'pss'`). The old constant keeps working while you stay on phpseclib 3, but it is a fatal error on phpseclib 4 (the class no longer exists), and the integer values differ between the two majors.
 - If you create `LaravelBiometricAuth` yourself, resolve it instead: `app(\Laranex\LaravelBiometricAuth\LaravelBiometricAuth::class)` or the `LaravelBiometricAuth` facade.
 - Clients must request a new challenge after every successful verification and after `challenge.max_attempts` (5) failed ones (set `BIOMETRIC_AUTH_CHALLENGE_MAX_ATTEMPTS=0` to keep unlimited retries) and after a challenge expires (300 seconds by default; set `BIOMETRIC_AUTH_CHALLENGE_TTL=0` to keep challenges that never expire); calling `getBiometric()` again returns one. Wrap `revokeBiometric()` in a `BiometricNotFoundException` catch where you previously checked for a failure.

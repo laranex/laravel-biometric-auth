@@ -43,11 +43,14 @@ return [
     |--------------------------------------------------------------------------
     |
     | RSA signatures need an explicit padding scheme and hash algorithm, so
-    | they must match the way your mobile apps sign the challenge. Every other
-    | key type (EC, Ed25519, DSA) is detected automatically by phpseclib.
+    | they must match the way your mobile apps sign the challenge. EC P-256,
+    | EC P-384 and Ed25519 keys need no settings. Only those curves and RSA
+    | keys of 2048 to 4096 bits are accepted; DSA and other keys are rejected.
     |
-    | Padding: "pkcs1" (RSASSA-PKCS1-v1_5) or "pss" (RSASSA-PSS); phpseclib 3
-    | also accepts "relaxed_pkcs1". The name works with phpseclib 3 and 4.
+    | Padding: "pkcs1" (RSASSA-PKCS1-v1_5) or "pss" (RSASSA-PSS); use one of
+    | these. phpseclib 3 also accepts "relaxed_pkcs1", which tolerates
+    | malformed PKCS#1 signature encodings and is therefore weaker; avoid it.
+    | The name works with phpseclib 3 and 4.
     |
     */
 

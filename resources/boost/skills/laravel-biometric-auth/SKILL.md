@@ -47,7 +47,7 @@ php artisan vendor:publish --tag="biometric-auth-migrations"  # once published, 
 - `table` (`BIOMETRIC_AUTH_TABLE`, default `biometrics`): the table that stores the public keys and pending challenges.
 - `challenge.ttl` (`BIOMETRIC_AUTH_CHALLENGE_TTL`, default `300`): seconds a challenge stays valid after it was issued; `0` or `null` disables expiry.
 - `challenge.max_attempts` (`BIOMETRIC_AUTH_CHALLENGE_MAX_ATTEMPTS`, default `5`): failed verifications allowed per challenge before it is cleared; `0` or `null` disables the limit. Attempts are counted in the default cache store.
-- `rsa.encryption_padding` (`pkcs1` by default, or `pss`) and `rsa.hash_algorithm` (`sha256` by default): must match how the app signs with an RSA key. EC and Ed25519 keys need no configuration.
+- `rsa.encryption_padding` (`pkcs1` by default, or `pss`) and `rsa.hash_algorithm` (`sha256` by default): must match how the app signs with an RSA key. EC and Ed25519 keys need no configuration. phpseclib 3 also accepts `relaxed_pkcs1`, which tolerates malformed signature encodings and is weaker; use `pkcs1` or `pss`.
 
 ## Use
 
@@ -63,7 +63,7 @@ Route::post('/biometrics', function (Request $request) {
 })->middleware('auth:sanctum');
 ```
 
-`createBiometric()` throws `InvalidPublicKeyException` when phpseclib cannot load the key.
+Accepted keys: EC P-256, EC P-384, Ed25519 and RSA with a 2048 to 4096-bit modulus. DSA, other curves, other RSA sizes, invalid base64 and keys over 8 KiB throw `InvalidPublicKeyException`.
 
 ### Issue a challenge (guest request)
 
@@ -111,7 +111,7 @@ All exceptions live in `Laranex\LaravelBiometricAuth\Exceptions` and extend `Bio
 
 - `BiometricNotFoundException` (404): unknown or revoked biometric id, from every method.
 - `BiometricChallengeNotFoundException` (422): verifying with no pending challenge (never issued, already used, too many failures or expired); request a new one.
-- `InvalidPublicKeyException` (422): the public key cannot be loaded.
+- `InvalidPublicKeyException` (422): the public key cannot be loaded or is not an accepted type or size.
 
 ## Test your app
 
