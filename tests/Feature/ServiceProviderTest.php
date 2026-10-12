@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
@@ -26,7 +27,7 @@ it('binds the manager as a singleton behind the facade', function () {
 
 it('runs the package migration', function () {
     expect(Schema::hasTable('biometrics'))->toBeTrue()
-        ->and(Schema::hasColumns('biometrics', ['id', 'authenticable_id', 'authenticable_type', 'public_key', 'challenge', 'revoked', 'created_at', 'updated_at']))->toBeTrue();
+        ->and(Schema::hasColumns('biometrics', ['id', 'authenticable_id', 'authenticable_type', 'public_key', 'challenge', 'challenge_issued_at', 'revoked', 'created_at', 'updated_at']))->toBeTrue();
 });
 
 it('reads the table name from the configuration', function () {
@@ -45,47 +46,94 @@ it('publishes the configuration file', function () {
         ->and(array_values($paths))->toBe([config_path('biometric-auth.php')]);
 });
 
-it('publishes the migration with a timestamp and reuses it on the next publish', function () {
-    $pattern = database_path('migrations/*_create_biometrics_table.php');
-    File::delete(glob($pattern) ?: []);
+it('publishes the migrations with ordered timestamps and reuses them on the next publish', function () {
+    $published = fn (): array => [
+        ...glob(database_path('migrations/*_create_biometrics_table.php')) ?: [],
+        ...glob(database_path('migrations/*_add_challenge_issued_at_to_biometrics_table.php')) ?: [],
+    ];
+    File::delete($published());
 
     $this->artisan('vendor:publish', ['--tag' => 'biometric-auth-migrations', '--no-interaction' => true])->assertExitCode(0);
 
-    $published = glob($pattern) ?: [];
+    [$create, $upgrade] = $published();
 
-    expect($published)->toHaveCount(1)
-        ->and(basename($published[0]))->toMatch('/^\d{4}_\d{2}_\d{2}_\d{6}_create_biometrics_table\.php$/')
-        ->and(File::get($published[0]))->toBe(File::get(__DIR__.'/../../database/migrations/create_biometrics_table.php'));
+    expect($published())->toHaveCount(2)
+        ->and(strcmp(basename($create), basename($upgrade)))->toBeLessThan(0)
+        ->and(basename($create))->toMatch('/^\d{4}_\d{2}_\d{2}_\d{6}_create_biometrics_table\.php$/')
+        ->and(basename($upgrade))->toMatch('/^\d{4}_\d{2}_\d{2}_\d{6}_add_challenge_issued_at_to_biometrics_table\.php$/')
+        ->and(File::get($create))->toBe(File::get(__DIR__.'/../../database/migrations/create_biometrics_table.php'))
+        ->and(File::get($upgrade))->toBe(File::get(__DIR__.'/../../database/migrations/add_challenge_issued_at_to_biometrics_table.php'));
 
     $this->artisan('vendor:publish', ['--tag' => 'biometric-auth-migrations', '--no-interaction' => true])->assertExitCode(0);
 
-    expect(glob($pattern) ?: [])->toHaveCount(1);
+    expect($published())->toBe([$create, $upgrade]);
 
-    File::delete($published);
+    File::delete($published());
 });
 
-it('publishes the config and the migration under the biometric-auth tag', function () {
-    $paths = ServiceProvider::pathsToPublish(LaravelBiometricAuthServiceProvider::class, 'biometric-auth');
+it('publishes the config and the migrations under the biometric-auth tag', function () {
+    $paths = array_values(ServiceProvider::pathsToPublish(LaravelBiometricAuthServiceProvider::class, 'biometric-auth'));
 
-    expect(array_values($paths))->toHaveCount(2)
+    expect($paths)->toHaveCount(3)
         ->and($paths)->toContain(config_path('biometric-auth.php'))
-        ->and(collect($paths)->contains(fn (string $target): bool => str_starts_with($target, database_path('migrations/')) && str_ends_with($target, '_create_biometrics_table.php')))->toBeTrue();
+        ->and(collect($paths)->contains(fn (string $target): bool => str_starts_with($target, database_path('migrations/')) && str_ends_with($target, '_create_biometrics_table.php')))->toBeTrue()
+        ->and(collect($paths)->contains(fn (string $target): bool => str_starts_with($target, database_path('migrations/')) && str_ends_with($target, '_add_challenge_issued_at_to_biometrics_table.php')))->toBeTrue();
 });
 
-it('stops loading its own migration once the application has published one', function () {
+it('stops loading each migration once the application has published it', function () {
     $published = database_path('migrations/2020_01_01_000000_create_biometrics_table.php');
     File::ensureDirectoryExists(dirname($published));
     File::copy(__DIR__.'/../../database/migrations/create_biometrics_table.php', $published);
 
-    $provider = new LaravelBiometricAuthServiceProvider(app());
-    $before = app('migrator')->paths();
+    $provider = new class(app()) extends LaravelBiometricAuthServiceProvider
+    {
+        /** @var list<string> */
+        public array $loaded = [];
+
+        protected function loadMigrationsFrom(mixed $paths): void
+        {
+            foreach ((array) $paths as $path) {
+                $this->loaded[] = (string) realpath($path);
+            }
+        }
+    };
+
+    $create = realpath(__DIR__.'/../../database/migrations/create_biometrics_table.php');
+    $upgrade = realpath(__DIR__.'/../../database/migrations/add_challenge_issued_at_to_biometrics_table.php');
+
     $provider->boot();
 
-    expect(app('migrator')->paths())->toBe($before);
+    expect($provider->loaded)->toBe([$upgrade]);
 
     File::delete($published);
+    $provider->loaded = [];
     $provider->boot();
 
-    expect(array_map(fn (string $path): string|false => realpath($path), app('migrator')->paths()))
-        ->toContain(realpath(__DIR__.'/../../database/migrations'));
+    expect($provider->loaded)->toBe([$create, $upgrade]);
+});
+
+it('adds the challenge_issued_at column to a table created by v3', function () {
+    $upgrade = require __DIR__.'/../../database/migrations/add_challenge_issued_at_to_biometrics_table.php';
+
+    Schema::drop('biometrics');
+    Schema::create('biometrics', function (Blueprint $table): void {
+        $table->uuid('id')->primary();
+        $table->string('authenticable_id');
+        $table->string('authenticable_type');
+        $table->longText('public_key');
+        $table->string('challenge')->nullable();
+        $table->boolean('revoked')->default(false);
+        $table->timestamps();
+    });
+
+    $upgrade->up();
+    $upgrade->up();
+
+    expect(Schema::hasColumn('biometrics', 'challenge_issued_at'))->toBeTrue();
+
+    $upgrade->down();
+    Schema::drop('biometrics');
+    $upgrade->up();
+
+    expect(Schema::hasTable('biometrics'))->toBeFalse();
 });

@@ -29,8 +29,10 @@ class LaravelBiometricAuthServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if ($this->publishedMigration() === null) {
-            $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        foreach ($this->migrations() as $migration) {
+            if ($this->publishedMigration($migration) === null) {
+                $this->loadMigrationsFrom(__DIR__."/../database/migrations/{$migration}.php");
+            }
         }
 
         if (! $this->app->runningInConsole()) {
@@ -41,21 +43,37 @@ class LaravelBiometricAuthServiceProvider extends ServiceProvider
             __DIR__.'/../config/biometric-auth.php' => $this->app->configPath('biometric-auth.php'),
         ], ['biometric-auth', 'biometric-auth-config']);
 
-        $this->publishes([
-            __DIR__.'/../database/migrations/create_biometrics_table.php' => $this->publishedMigration()
-                ?? $this->app->databasePath('migrations/'.date('Y_m_d_His').'_create_biometrics_table.php'),
-        ], ['biometric-auth', 'biometric-auth-migrations']);
+        $migrations = [];
+        $now = time();
+
+        // One second apart, so the published files keep the order of migrations().
+        foreach ($this->migrations() as $offset => $migration) {
+            $migrations[__DIR__."/../database/migrations/{$migration}.php"] = $this->publishedMigration($migration)
+                ?? $this->app->databasePath('migrations/'.date('Y_m_d_His', $now + $offset)."_{$migration}.php");
+        }
+
+        $this->publishes($migrations, ['biometric-auth', 'biometric-auth-migrations']);
     }
 
     /**
-     * The path of the migration the application has already published, if any.
+     * The package migrations, in the order they run.
+     *
+     * @return list<string>
+     */
+    private function migrations(): array
+    {
+        return ['create_biometrics_table', 'add_challenge_issued_at_to_biometrics_table'];
+    }
+
+    /**
+     * The path of the given migration if the application has already published it.
      *
      * When it exists the package migration is not loaded a second time, so
-     * "vendor:publish" followed by "migrate" never creates the table twice.
+     * "vendor:publish" followed by "migrate" never runs it twice.
      */
-    private function publishedMigration(): ?string
+    private function publishedMigration(string $migration): ?string
     {
-        $published = glob($this->app->databasePath('migrations/*_create_biometrics_table.php'));
+        $published = glob($this->app->databasePath("migrations/*_{$migration}.php"));
 
         return is_array($published) && $published !== [] ? $published[0] : null;
     }

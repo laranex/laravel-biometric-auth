@@ -38,7 +38,10 @@ class LaravelBiometricAuth
         }
 
         // Only replace the challenge this request has seen, so concurrent requests agree on one challenge.
-        $this->whereChallenge($biometric, $biometric->challenge)->update(['challenge' => $this->generateChallenge()]);
+        $this->whereChallenge($biometric, $biometric->challenge)->update([
+            'challenge' => $this->generateChallenge(),
+            'challenge_issued_at' => $biometric->freshTimestamp(),
+        ]);
 
         $biometric->refresh();
 
@@ -127,10 +130,9 @@ class LaravelBiometricAuth
     }
 
     /**
-     * Whether the pending challenge is older than the configured lifetime.
+     * Whether the pending challenge is older than the configured lifetime, counted from challenge_issued_at.
      *
-     * A challenge is only ever written together with the row's updated_at timestamp, which
-     * therefore records when it was issued.
+     * A challenge without an issue time (written before the column existed) counts as expired.
      */
     private function challengeHasExpired(Biometric $biometric): bool
     {
@@ -140,7 +142,8 @@ class LaravelBiometricAuth
             return false;
         }
 
-        return $biometric->updated_at === null || $biometric->updated_at->copy()->addSeconds($ttl)->isPast();
+        return $biometric->challenge_issued_at === null
+            || $biometric->challenge_issued_at->copy()->addSeconds($ttl)->isPast();
     }
 
     /**
@@ -148,7 +151,7 @@ class LaravelBiometricAuth
      */
     private function clearChallenge(Biometric $biometric, string $challenge): bool
     {
-        return $this->whereChallenge($biometric, $challenge)->update(['challenge' => null]) === 1;
+        return $this->whereChallenge($biometric, $challenge)->update(['challenge' => null, 'challenge_issued_at' => null]) === 1;
     }
 
     /**

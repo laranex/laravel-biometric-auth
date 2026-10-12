@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Config;
  * @property string $authenticable_type
  * @property string $public_key
  * @property string|null $challenge
+ * @property Carbon|null $challenge_issued_at
  * @property bool|int $revoked
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -43,6 +44,15 @@ class Biometric extends Model
      * @var list<string>
      */
     protected $hidden = ['public_key', 'challenge', 'authenticable_id', 'authenticable_type'];
+
+    /**
+     * The attributes that should be cast (a property, so Laravel 10 reads it too).
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'challenge_issued_at' => 'datetime',
+    ];
 
     /**
      * Get the table associated with the model.

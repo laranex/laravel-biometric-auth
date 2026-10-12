@@ -60,6 +60,6 @@ trait HasBiometrics
             throw new BiometricNotFoundException;
         }
 
-        return $biometric->forceFill(['revoked' => true])->save();
+        return $biometric->forceFill(['revoked' => true, 'challenge' => null, 'challenge_issued_at' => null])->save();
     }
 }

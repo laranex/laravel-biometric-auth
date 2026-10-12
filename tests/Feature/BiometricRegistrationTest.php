@@ -95,7 +95,7 @@ it('never exposes the public key, the challenge or the owner when the biometric 
 
     expect($biometric)->toBeInstanceOf(Biometric::class)
         ->and($biometric?->challenge)->toBeString()
-        ->and($biometric?->toArray())->toHaveKeys(['id', 'revoked', 'created_at', 'updated_at'])
+        ->and($biometric?->toArray())->toHaveKeys(['id', 'revoked', 'challenge_issued_at', 'created_at', 'updated_at'])
         ->not->toHaveKeys(['public_key', 'challenge', 'authenticable_id', 'authenticable_type'])
         ->and(json_decode((string) $biometric?->toJson(), true))->not->toHaveKeys(['public_key', 'challenge', 'authenticable_id', 'authenticable_type']);
 });

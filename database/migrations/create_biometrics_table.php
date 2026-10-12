@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('authenticable_type');
             $table->longText('public_key');
             $table->string('challenge')->nullable();
+            $table->timestamp('challenge_issued_at')->nullable();
             $table->boolean('revoked')->default(false);
             $table->timestamps();
 

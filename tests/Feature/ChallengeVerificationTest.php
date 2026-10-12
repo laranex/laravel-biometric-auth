@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Route;
 use Laranex\LaravelBiometricAuth\Exceptions\BiometricChallengeNotFoundException;
 use Laranex\LaravelBiometricAuth\Exceptions\BiometricNotFoundException;
@@ -145,6 +146,7 @@ it('reports a stored public key that can no longer be loaded', function () {
         'authenticable_type' => 'App\Models\User',
         'public_key' => base64_encode('corrupted'),
         'challenge' => 'abc',
+        'challenge_issued_at' => Date::now(),
     ]);
 
     LaravelBiometricAuth::verifyBiometric($biometric->id, base64_encode('signature'));
@@ -242,6 +244,41 @@ it('issues a fresh challenge once the pending one has expired', function () {
 
     expect($fresh)->toMatch('/^[0-9a-f]{64}$/')->not->toBe($challenge)
         ->and($biometric->fresh()?->challenge)->toBe($fresh);
+});
+
+it('records when the challenge was issued and clears it with the challenge', function () {
+    $privateKey = rsaPrivateKey();
+    $biometric = createUser()->createBiometric(publicKeyBase64($privateKey));
+
+    expect($biometric->fresh()?->challenge_issued_at)->toBeNull();
+
+    $this->freezeSecond();
+    $challenge = (string) LaravelBiometricAuth::getBiometric($biometric->id)->challenge;
+
+    expect($biometric->fresh()?->challenge_issued_at?->equalTo(Date::now()))->toBeTrue()
+        ->and(LaravelBiometricAuth::verifyBiometric($biometric->id, signChallenge($privateKey, $challenge)))->toBeTrue()
+        ->and($biometric->fresh()?->challenge_issued_at)->toBeNull();
+});
+
+it('measures expiry from the issue time, not from the last update of the row', function () {
+    $biometric = createUser()->createBiometric(publicKeyBase64(rsaPrivateKey()));
+    $challenge = LaravelBiometricAuth::getBiometric($biometric->id)->challenge;
+
+    $this->travel(200)->seconds();
+    $biometric->fresh()?->touch();
+    $this->travel(101)->seconds();
+
+    expect(LaravelBiometricAuth::getBiometric($biometric->id)->challenge)->not->toBe($challenge);
+});
+
+it('replaces a pending challenge that has no issue time', function () {
+    $biometric = createUser()->createBiometric(publicKeyBase64(rsaPrivateKey()));
+    Biometric::query()->whereKey($biometric->id)->update(['challenge' => str_repeat('b', 64)]);
+
+    $challenged = LaravelBiometricAuth::getBiometric($biometric->id);
+
+    expect($challenged->challenge)->toMatch('/^[0-9a-f]{64}$/')->not->toBe(str_repeat('b', 64))
+        ->and($challenged->challenge_issued_at)->not->toBeNull();
 });
 
 it('refuses to verify an expired challenge and clears it', function () {
