@@ -8,6 +8,7 @@ use Laranex\LaravelBiometricAuth\Exceptions\BiometricChallengeNotFoundException;
 use Laranex\LaravelBiometricAuth\Exceptions\BiometricException;
 use Laranex\LaravelBiometricAuth\Exceptions\BiometricNotFoundException;
 use Laranex\LaravelBiometricAuth\Exceptions\InvalidPublicKeyException;
+use Laranex\LaravelBiometricAuth\Exceptions\TooManyBiometricsException;
 
 it('ships a default message, code and HTTP status for every exception', function (string $class, string $message, int $status) {
     $exception = new $class;
@@ -22,6 +23,7 @@ it('ships a default message, code and HTTP status for every exception', function
     [BiometricNotFoundException::class, 'Biometric not found', 404],
     [BiometricChallengeNotFoundException::class, 'Biometric challenge not found', 422],
     [InvalidPublicKeyException::class, 'Invalid Public Key', 422],
+    [TooManyBiometricsException::class, 'Too many biometrics registered', 422],
 ]);
 
 it('accepts a custom message, code and previous exception', function () {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Str;
 use Laranex\LaravelBiometricAuth\Exceptions\BiometricNotFoundException;
 use Laranex\LaravelBiometricAuth\Exceptions\InvalidPublicKeyException;
+use Laranex\LaravelBiometricAuth\Exceptions\TooManyBiometricsException;
 use Laranex\LaravelBiometricAuth\Facades\LaravelBiometricAuth;
 use Laranex\LaravelBiometricAuth\Models\Biometric;
 use Workbench\App\Models\User;
@@ -79,6 +80,46 @@ it('rejects an empty public key', function () {
 it('rejects a public key longer than 8 KiB before decoding it', function () {
     createUser()->createBiometric(str_repeat('A', 8193));
 })->throws(InvalidPublicKeyException::class);
+
+it('limits active biometrics to ten per model by default', function () {
+    $user = createUser();
+
+    foreach (range(1, 10) as $device) {
+        $user->createBiometric(publicKeyBase64(ecPrivateKey()));
+    }
+
+    expect(fn () => $user->createBiometric(publicKeyBase64(ecPrivateKey())))
+        ->toThrow(TooManyBiometricsException::class, 'Too many biometrics registered')
+        ->and($user->biometrics()->count())->toBe(10)
+        ->and(createUser('other@example.com')->createBiometric(publicKeyBase64(ecPrivateKey()))->exists)->toBeTrue();
+});
+
+it('honors the configured limit and does not count revoked biometrics', function () {
+    config()->set('biometric-auth.max_per_user', 2);
+
+    $user = createUser();
+    $first = $user->createBiometric(publicKeyBase64(ecPrivateKey()));
+    $user->createBiometric(publicKeyBase64(ecPrivateKey()));
+
+    expect(fn () => $user->createBiometric(publicKeyBase64(ecPrivateKey())))->toThrow(TooManyBiometricsException::class);
+
+    $user->revokeBiometric($first->id);
+
+    expect($user->createBiometric(publicKeyBase64(ecPrivateKey()))->exists)->toBeTrue()
+        ->and($user->biometrics()->active()->count())->toBe(2);
+});
+
+it('does not limit biometrics when max_per_user is disabled', function (mixed $disabled) {
+    config()->set('biometric-auth.max_per_user', $disabled);
+
+    $user = createUser();
+
+    foreach (range(1, 12) as $device) {
+        $user->createBiometric(publicKeyBase64(ecPrivateKey()));
+    }
+
+    expect($user->biometrics()->count())->toBe(12);
+})->with([0, null]);
 
 it('rejects a public key phpseclib cannot load', function () {
     createUser()->createBiometric(base64_encode('not a public key'));

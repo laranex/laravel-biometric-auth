@@ -45,6 +45,7 @@ php artisan vendor:publish --tag="biometric-auth-migrations"  # once published, 
 `config/biometric-auth.php`:
 
 - `table` (`BIOMETRIC_AUTH_TABLE`, default `biometrics`): the table that stores the public keys and pending challenges.
+- `max_per_user` (`BIOMETRIC_AUTH_MAX_PER_USER`, default `10`): active (not revoked) biometrics one model may register; `0` or `null` allows any number.
 - `challenge.ttl` (`BIOMETRIC_AUTH_CHALLENGE_TTL`, default `300`): seconds a challenge stays valid after it was issued; `0` or `null` disables expiry.
 - `challenge.max_attempts` (`BIOMETRIC_AUTH_CHALLENGE_MAX_ATTEMPTS`, default `5`): failed verifications allowed per challenge before it is cleared; `0` or `null` disables the limit. Attempts are counted in the default cache store.
 - `rsa.encryption_padding` (`pkcs1` by default, or `pss`) and `rsa.hash_algorithm` (`sha256` by default): must match how the app signs with an RSA key. EC and Ed25519 keys need no configuration. phpseclib 3 also accepts `relaxed_pkcs1`, which tolerates malformed signature encodings and is weaker; use `pkcs1` or `pss`.
@@ -55,15 +56,23 @@ php artisan vendor:publish --tag="biometric-auth-migrations"  # once published, 
 
 The client generates a key pair and sends the base64 encoded public key (PEM or DER). Return the biometric id (a UUID); the client stores it next to its private key.
 
+A registered key keeps working after the bearer token that enrolled it is revoked, so a stolen token alone must not be enough to enroll one: ask for the current password (or an OTP) in the same request, and tell the user a new device was added so an unexpected enrollment gets noticed.
+
 ```php
 Route::post('/biometrics', function (Request $request) {
+    $request->validate(['password' => ['required', 'current_password:sanctum']]);
+
     $biometric = $request->user()->createBiometric($request->string('public_key')->toString());
 
+    // Your own notification: "A new device can now sign in to your account."
+    $request->user()->notify(new BiometricRegistered($biometric));
+
     return ['biometric_id' => $biometric->id];
-})->middleware('auth:sanctum');
+})->middleware(['auth:sanctum', 'throttle:5,1']);
 ```
 
-Accepted keys: EC P-256, EC P-384, Ed25519 and RSA with a 2048 to 4096-bit modulus. DSA, other curves, other RSA sizes, invalid base64 and keys over 8 KiB throw `InvalidPublicKeyException`.
+- Accepted keys: EC P-256, EC P-384, Ed25519 and RSA with a 2048 to 4096-bit modulus. DSA, other curves, other RSA sizes, invalid base64 and keys over 8 KiB throw `InvalidPublicKeyException`.
+- `createBiometric()` throws `TooManyBiometricsException` once the model has `max_per_user` active biometrics; revoke one first.
 
 ### Issue a challenge (guest request)
 
@@ -112,6 +121,7 @@ All exceptions live in `Laranex\LaravelBiometricAuth\Exceptions` and extend `Bio
 - `BiometricNotFoundException` (404): unknown or revoked biometric id, from every method.
 - `BiometricChallengeNotFoundException` (422): verifying with no pending challenge (never issued, already used, too many failures or expired); request a new one.
 - `InvalidPublicKeyException` (422): the public key cannot be loaded or is not an accepted type or size.
+- `TooManyBiometricsException` (422): the model already has `max_per_user` active biometrics.
 
 ## Test your app
 
@@ -138,6 +148,7 @@ it('logs in with a biometric and rejects a replayed signature', function () {
 ## Avoid
 
 - Treating a known biometric id as proof of identity: only a `true` from `verifyBiometric()` is.
+- Enrolling a device on a bearer token alone, without a fresh password or OTP check and a new-device notification.
 - Leaving the challenge and verify routes unthrottled.
 - Storing or logging private keys or signatures; the server only needs the public key.
 - Catching `BiometricNotFoundException` to fall back to another biometric; ask the client to register again.

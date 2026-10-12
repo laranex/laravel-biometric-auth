@@ -16,7 +16,8 @@ it('merges the default configuration', function () {
         ->and(config('biometric-auth.rsa.encryption_padding'))->toBe('pkcs1')
         ->and(config('biometric-auth.rsa.hash_algorithm'))->toBe('sha256')
         ->and(config('biometric-auth.challenge.ttl'))->toBe(300)
-        ->and(config('biometric-auth.challenge.max_attempts'))->toBe(5);
+        ->and(config('biometric-auth.challenge.max_attempts'))->toBe(5)
+        ->and(config('biometric-auth.max_per_user'))->toBe(10);
 });
 
 it('binds the manager as a singleton behind the facade', function () {

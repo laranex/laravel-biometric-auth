@@ -19,6 +19,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Biometrics Per User
+    |--------------------------------------------------------------------------
+    |
+    | The most active (not revoked) biometrics one authenticatable model may
+    | register. createBiometric() throws TooManyBiometricsException once the
+    | limit is reached, so a stolen session cannot enroll devices without
+    | bound. Set it to 0 or null to allow any number.
+    |
+    */
+
+    'max_per_user' => env('BIOMETRIC_AUTH_MAX_PER_USER', 10),
+
+    /*
+    |--------------------------------------------------------------------------
     | Challenges
     |--------------------------------------------------------------------------
     |
